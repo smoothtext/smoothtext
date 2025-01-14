@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "smoothtext"
 description = "SmoothText is a Python library that aims to provide an easy-to-use interface to calculate readability statistics of texts in multiple languages and multiple formulas."
 
-version = "0.0.10"
+version = "0.0.11"
 
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing",
 ]
 
 [project.optional-dependencies]
@@ -33,5 +34,5 @@ name = "Tuğrul Güngör"
 email = "contact@tugrulgungor.me"
 
 [project.urls]
-Homepage = "https://github.com/tugrulgungor/smoothtext"
-Issues = "https://github.com/tugrulgungor/smoothtext/issues"
+Homepage = "https://github.com/smoothtext/smoothtext"
+Issues = "https://github.com/smoothtext/smoothtext/issues"

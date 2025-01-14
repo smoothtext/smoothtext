@@ -2,7 +2,10 @@
 
 ---
 
-[![PyPI](https://img.shields.io/pypi/v/smoothtext.svg)](https://pypi.org/project/smoothtext/)
+[![license](https://img.shields.io/github/license/smoothtext/smoothtext.svg)](https://github.com/smoothtext/smoothtext/blob/main/LICENSE)
+[![versions](https://img.shields.io/pypi/pyversions/smoothtext.svg)](https://github.com/smoothtext/smoothtext)
+[![pypi](https://img.shields.io/pypi/v/smoothtext.svg)](https://pypi.org/project/smoothtext/)
+[![downloads](https://static.pepy.tech/personalized-badge/smoothtext?period=total&units=international_system&left_color=grey&right_color=orange&left_text=pip%20downloads)](https://pypi.org/project/smoothtext/)
 
 ## Introduction
 
@@ -12,6 +15,8 @@ multiple languages.
 The design principle of this library is to ensure high accuracy.
 
 ## Requirements
+
+Python 3.10 or higher.
 
 ### External Dependencies
 
@@ -53,7 +58,9 @@ SmoothText can calculate how long would a text take to read.
 You can install `SmoothText` via `pip`.
 
 ```python
-pip install smoothtext
+pip
+install
+smoothtext
 ```
 
 ## Usage
@@ -109,3 +116,7 @@ See [here](https://smoothtext.github.io/) for API documentation.
 ## Roadmap
 
 `SmoothText` is still in its early stages. The immediate tasks include adding more languages and backends.
+
+## License
+
+SmoothText has a MIT license. See [LICENSE](./LICENSE).

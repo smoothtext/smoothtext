@@ -10,7 +10,7 @@ from .formula import ReadabilityFormula
 from .language import Language
 from .smoothtext import SmoothText
 
-__version__ = (0, 0, 10)
+__version__ = (0, 0, 11)
 
 for attribute in dir(ReadabilityFormula):
     if callable(getattr(ReadabilityFormula, attribute)):

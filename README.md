@@ -104,7 +104,7 @@ print(score_1, score_2)
 
 ## Documentation
 
-See [here](https://smoothtext.tugrulgungor.me/) for API documentation.
+See [here](https://smoothtext.github.io/) for API documentation.
 
 ## Roadmap
 

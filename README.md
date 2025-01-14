@@ -117,4 +117,4 @@ SmoothText is still in its early stages. The immediate tasks include adding more
 
 ## License
 
-SmoothText has a MIT license. See [LICENSE](./LICENSE).
+SmoothText has an MIT license. See [LICENSE](./LICENSE).

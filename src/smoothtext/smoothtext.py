@@ -196,7 +196,7 @@ class SmoothText:
 
     # Syllable-based operations.
     def _syllabify_eng(self, token: str) -> list[str]:
-        return self._syllable_tokenizer_.tokenize(token)
+        return self._syllable_tokenizer_.tokenize(_asciify(token))
 
     @staticmethod
     def _syllabify_tur(token: str) -> list[str]:
@@ -241,7 +241,7 @@ class SmoothText:
         syllables.reverse()
         return syllables
 
-    def syllabify(self, token: str, filter_words: bool | None = True) -> list[str] | list[list[str]]:
+    def syllabify(self, token: str, filter_words: bool = True) -> list[str] | list[list[str]]:
         """
         Breaks down the `token` into syllables.
         :param token: Token to syllabify.
@@ -274,7 +274,7 @@ class SmoothText:
 
         return syllables
 
-    def count_syllables(self, text: str, filter_words: bool | None = True) -> int:
+    def count_syllables(self, text: str, filter_words: bool = True) -> int:
         """
         Counts the number of syllables in the `text`.
         :param text: Text to be counted.

@@ -1,0 +1,11 @@
+# Editor
+.env
+.idea
+
+# Builds
+dist
+*__pycache__*
+*.egg*
+
+# Tests (must be updated)
+test

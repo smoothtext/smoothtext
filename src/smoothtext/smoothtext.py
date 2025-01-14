@@ -205,7 +205,7 @@ class SmoothText:
         if 0 == len(token):
             return syllables
 
-        token_: str = ''.join(c if c.isalnum() else ' ' for c in _asciify(token))
+        token_: str = _asciify(''.join(c if c.isalnum() else ' ' for c in token))
         if len(token_) != len(token):
             raise UnicodeError(f'Invalid syllable token: {token}.')
 

@@ -9,7 +9,7 @@
 
 ## Introduction
 
-`SmoothText` is a Python library for calculating readability scores of texts and statistical information for texts in
+SmoothText is a Python library for calculating readability scores of texts and statistical information for texts in
 multiple languages.
 
 The design principle of this library is to ensure high accuracy.
@@ -55,19 +55,17 @@ SmoothText can calculate how long would a text take to read.
 
 ## Installation
 
-You can install `SmoothText` via `pip`.
+You can install SmoothText via `pip`.
 
-```python
-pip
-install
-smoothtext
+```Python
+pip install smoothtext
 ```
 
 ## Usage
 
 ### Importing and Initializing the Library
 
-`SmoothText` comes with three submodules: `Language`, `ReadabilityFormula` and `SmoothText`.
+SmoothText comes with three submodules: `Language`, `ReadabilityFormula` and SmoothText.
 
 ```Python
 from smoothtext import Language, ReadabilityFormula, SmoothText
@@ -82,7 +80,7 @@ SmoothText.setup(backend='nltk')
 
 ### Instancing
 
-`SmoothText` is expected to be used with `SmoothText` class instances.
+SmoothText is expected to be used with SmoothText class instances.
 
 ```Python
 st = SmoothText('en')
@@ -115,7 +113,7 @@ See [here](https://smoothtext.github.io/) for API documentation.
 
 ## Roadmap
 
-`SmoothText` is still in its early stages. The immediate tasks include adding more languages and backends.
+SmoothText is still in its early stages. The immediate tasks include adding more languages and backends.
 
 ## License
 

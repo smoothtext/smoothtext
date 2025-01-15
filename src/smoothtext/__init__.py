@@ -6,23 +6,15 @@
 #  Distributed under the MIT License.
 #  https://opensource.org/license/mit/
 
+from .backend import Backend
 from .formula import ReadabilityFormula
 from .language import Language
 from .smoothtext import SmoothText
 
-__version__ = (0, 0, 13)
+__version__ = SmoothText.version
 
-for attribute in dir(ReadabilityFormula):
-    if callable(getattr(ReadabilityFormula, attribute)):
-        if not attribute.startswith("_"):
-            globals()[attribute] = getattr(ReadabilityFormula, attribute)
-
-for attribute in dir(Language):
-    if callable(getattr(Language, attribute)):
-        if not attribute.startswith("_"):
-            globals()[attribute] = getattr(Language, attribute)
-
-for attribute in dir(SmoothText):
-    if callable(getattr(SmoothText, attribute)):
-        if not attribute.startswith("_"):
-            globals()[attribute] = getattr(SmoothText, attribute)
+for module in (Backend, ReadabilityFormula, Language, SmoothText):
+    for attr in dir(module):
+        if callable(getattr(module, attr)):
+            if not attr.startswith("_"):
+                globals()[attr] = getattr(module, attr)

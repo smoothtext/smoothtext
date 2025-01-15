@@ -5,13 +5,16 @@
 #
 #  Distributed under the MIT License.
 #  https://opensource.org/license/mit/
+import pyphen
 
-from . import ReadabilityFormula
+from . import Backend
 from . import Language
+from . import ReadabilityFormula
 
 import importlib
 import math
 import os
+from pyphen import Pyphen
 from types import ModuleType
 from unidecode import unidecode
 
@@ -39,21 +42,27 @@ class SmoothText:
     Smooth Text class.
     """
 
+    # Public static fields.
+    version: tuple[int, int, int] = (0, 0, 14)
+
     # Private static fields.
     _languages: list[Language] = []
-    _backend: ModuleType = None
+    _backend: ModuleType | None = None
+    _backend_type: Backend | None = None
 
     # Setup
     @staticmethod
-    def setup(backend: None | str = None, languages: Language | list[Language] | str | list[str] | None = None,
+    def setup(backend: None | Backend | str = None,
+              languages: Language | list[Language] | str | list[str] | None = None, skip_downloads: bool = False,
               **kwargs) -> None:
         """
         Global setup function for the SmoothText class.
-        :param backend: Backend to use. Must be one of the following: `NLTK`. If `None`, the value is imported from the
+        :param backend: Backend to use. Must be one of the following: `NLTK`, 'Stanza'. If `None`, the value is imported from the
         environment variable `SMOOTHTEXT_BACKEND`.
         :param languages: Language or languages to enable. This can be a single language code/name or a list of language
         codes/names (e.g., `['English', 'Turkish']`). Only the resources for the specified languages will be imported.
-        If `None` or empty, all the languages are imported.
+        If `None` or empty, all the supported languages are imported.
+        :param skip_downloads: If `True`, backend data is not downloaded. Default is False.
         :param kwargs: Additional keyword arguments to pass to the backend's data downloader function.
         :return: `None`. This function does not return anything but might raise exceptions.
         """
@@ -75,18 +84,38 @@ class SmoothText:
         if backend is None:
             backend = os.environ.get('SMOOTHTEXT_BACKEND')
 
-        if isinstance(backend, str) and backend.lower() == 'NLTK'.lower():
+        backend = Backend.parse(backend)
+
+        if not Backend.is_supported(backend):
+            raise RuntimeError(f"Backend {backend} is not supported.")
+
+        if Backend.NLTK == backend:
             try:
                 nltk = importlib.import_module('nltk')
-                if not nltk.download('punkt_tab', **kwargs):
-                    raise ImportError('Could not download NLTK data.')
+
+                if not skip_downloads:
+                    if not nltk.download('punkt_tab', **kwargs):
+                        raise ImportError('Could not download NLTK data.')
 
                 globals()['nltk'] = nltk
                 SmoothText._backend = nltk
             except ModuleNotFoundError:
                 raise ModuleNotFoundError('NLTK is not installed.')
-        else:
-            raise Exception(f'Backend \'{backend}\' is not supported.')
+
+        if Backend.Stanza == backend:
+            try:
+                stanza = importlib.import_module('stanza')
+
+                if not skip_downloads:
+                    for l in languages:
+                        print('stanza.download', l)
+                        stanza.download(lang=l.alpha2(), **kwargs)
+
+                SmoothText._stanza = stanza
+            except ModuleNotFoundError:
+                raise ModuleNotFoundError('Stanza is not installed.')
+
+        SmoothText._backend_type = backend
 
     # Constructor
     def __init__(self, language: Language | str | None = None):
@@ -95,12 +124,15 @@ class SmoothText:
         :param language: Default language to use.
         """
 
+        if SmoothText._backend_type is None or 0 == len(SmoothText._languages):
+            raise Exception('Call SmoothText.setup() first.')
+
         if language is None:
             language = SmoothText._languages[0]
         else:
             language = Language.parse(language)
 
-        self._set_language_(language)
+        self._set_language(language)
 
     # Instance language.
     @property
@@ -119,23 +151,51 @@ class SmoothText:
         :param language: New language.
         """
 
-        self._set_language_(Language.parse(language))
+        self._set_language(Language.parse(language))
 
-    def _set_language_(self, language: Language) -> None:
+    def _set_callbacks(self) -> None:
+        if SmoothText._backend_type == Backend.NLTK:
+            self._sentencize = self._sentencize_nltk
+            self._tokenize = self._tokenize_nltk
+        elif SmoothText._backend_type == Backend.Stanza:
+            self._backend = self._stanza.Pipeline(lang=self._language.alpha2(), processors='tokenize',
+                                                  verbose=False,
+                                                  download_method=self._stanza.DownloadMethod.REUSE_RESOURCES)
+
+            self._sentencize = self._sentencize_stanza
+            self._tokenize = self._tokenize_stanza
+
+        if Language.English == self.language:
+            self._syllable_tokenizer = self._syllabify_eng
+            self._syllable_helper = pyphen.Pyphen(lang='en')
+        elif Language.Turkish == self.language:
+            self._syllable_tokenizer = self._syllabify_tur
+            self._syllable_helper = None
+
+    def _set_language(self, language: Language) -> None:
         if language not in SmoothText._languages:
             raise ValueError(f'Invalid language: {language}. Make sure the language was included in the setup.')
 
         self._language = language
         self._language_value = self._language.value.lower()
 
-        if Language.Turkish == language:
-            self._syllable_tokenizer_ = None
-        else:
-            self._syllable_tokenizer_ = SmoothText._backend.tokenize.SyllableTokenizer(self._language.alpha2())
-
         self._constants = _Constants[self._language]
 
+        return self._set_callbacks()
+
     # Sentence-based operations.
+    def _sentencize_nltk(self, text: str) -> list[str]:
+        return SmoothText._backend.sent_tokenize(text, self._language_value)
+
+    def _sentencize_stanza(self, text: str) -> list[str]:
+        sentences: list[str] = []
+
+        doc = self._backend(text)
+        for sentence in doc.sentences:
+            sentences.append(sentence.text)
+
+        return sentences
+
     def sentencize(self, text: str) -> list[str]:
         """
         Breaks down the `text` into sentences.
@@ -143,7 +203,7 @@ class SmoothText:
         :return: List of sentences.
         """
 
-        return SmoothText._backend.sent_tokenize(text, self._language_value)
+        return self._sentencize(text)
 
     def count_sentences(self, text: str) -> int:
         """
@@ -167,6 +227,19 @@ class SmoothText:
 
         return words
 
+    def _tokenize_nltk(self, text: str) -> list[str]:
+        return self._backend.word_tokenize(text, self._language_value)
+
+    def _tokenize_stanza(self, text: str) -> list[str]:
+        tokens: list[str] = []
+
+        doc = self._backend(text)
+        for sentence in doc.sentences:
+            for token in sentence.tokens:
+                tokens.append(token.text)
+
+        return tokens
+
     def tokenize(self, text: str) -> list[str]:
         """
         Breaks down the `text` into tokens.
@@ -174,7 +247,7 @@ class SmoothText:
         :return: The list of tokens.
         """
 
-        return SmoothText._backend.word_tokenize(text, self._language_value)
+        return self._tokenize(text)
 
     def count_words(self, text: str) -> int:
         """
@@ -196,7 +269,7 @@ class SmoothText:
 
     # Syllable-based operations.
     def _syllabify_eng(self, token: str) -> list[str]:
-        return self._syllable_tokenizer_.tokenize(_asciify(token))
+        return self._syllable_helper.inserted(word=_asciify(token), hyphen='\0').split('\0')
 
     @staticmethod
     def _syllabify_tur(token: str) -> list[str]:
@@ -250,16 +323,11 @@ class SmoothText:
         :remark: If token is in fact a list of tokens (phrase, sentence, etc.), each is syllabified separately.
         """
 
-        if Language.English == self._language:
-            syllabification_callback = self._syllabify_eng
-        elif Language.Turkish == self._language:
-            syllabification_callback = SmoothText._syllabify_tur
-
         syllables: list[list[str]] = []
 
         tokens: list[str] = self.tokenize(token)
         for token in tokens:
-            token_syllables: list[str] = syllabification_callback(token)
+            token_syllables: list[str] = self._syllable_tokenizer(token)
 
             if filter_words:
                 token_syllables = [s for s in token_syllables if s.isalnum()]

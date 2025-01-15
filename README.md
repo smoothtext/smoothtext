@@ -9,7 +9,7 @@
 
 ---
 
-> SmoothText is still in alpha and there are may be breaking changes.
+> SmoothText is still in alpha and there may be breaking changes.
 
 ---
 

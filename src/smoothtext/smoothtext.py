@@ -43,7 +43,7 @@ class SmoothText:
     """
 
     # Public static fields.
-    version: tuple[int, int, int] = (0, 0, 14)
+    version: tuple[int, int, int] = (0, 0, 15)
 
     # Private static fields.
     _languages: list[Language] = []

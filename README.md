@@ -26,12 +26,12 @@ Python 3.10 or higher.
 
 ### External Dependencies
 
-|                     Library                      |  Version   |   License    | Notes                   |
-|:------------------------------------------------:|:----------:|:------------:|-------------------------|
-|          [NLTK](https://www.nltk.org/)           | `>=3.9.1`  | `Apache 2.0` | Conditionally optional. |
-| [Stanza](https://stanfordnlp.github.io/stanza/)  | `>=1.10.1` | `Apache 2.0` | Conditionally optional. |
-| [Unidecode](https://pypi.org/project/Unidecode/) | `>=1.3.8`  | `GNU GPLv2`  | Required.               |
-|    [Pyphen](https://github.com/Kozea/Pyphen)     | `>=0.17.0` | `Apache 2.0` | Required.               |
+|                     Library                      |  Version   |           License            | Notes                   |
+|:------------------------------------------------:|:----------:|:----------------------------:|-------------------------|
+|          [NLTK](https://www.nltk.org/)           | `>=3.9.1`  |         `Apache 2.0`         | Conditionally optional. |
+| [Stanza](https://stanfordnlp.github.io/stanza/)  | `>=1.10.1` |         `Apache 2.0`         | Conditionally optional. |
+| [Unidecode](https://pypi.org/project/Unidecode/) | `>=1.3.8`  |         `GNU GPLv2`          | Required.               |
+|    [Pyphen](https://github.com/Kozea/Pyphen)     | `>=0.17.0` | `GPL 2.0+/LGPL 2.1+/MPL 1.1` | Required.               |
 
 Either NLTK or Stanza must be installed and used with the SmoothText library.
 

@@ -20,7 +20,7 @@ jobs:
             python -m pip install pipenv
             pipenv install --dev
             python -m pip install -e .
-            python -m pip install cmudict nltk pytest unidecode stanza --quiet
+            python -m pip install cmudict nltk pyphen pytest unidecode stanza --quiet
       - name: Run tests
         run: |
             pipenv run pytest

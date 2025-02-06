@@ -1,16 +1,12 @@
 [build-system]
-requires = ["pyphen>=0.17.0", "setuptools>=75.8.0", "unidecode>=1.3.8"]
 build-backend = "setuptools.build_meta"
+requires = [
+    "pyphen>=0.17.0",
+    "setuptools>=75.8.0",
+    "unidecode>=1.3.8",
+]
 
 [project]
-name = "smoothtext"
-description = "SmoothText is a Python library for calculating readability scores of texts and statistical information for texts in multiple languages."
-
-version = "0.0.17"
-
-readme = "README.md"
-requires-python = ">=3.10,<3.13"
-
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
@@ -23,21 +19,50 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Text Processing",
 ]
-
-[project.optional-dependencies]
-nltk = [
-    "nltk>=3.9.1"
+description = "A Python library for text readability analysis, supporting multiple languages including English and Turkish."
+name = "smoothtext"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+keywords = [
+    "readability",
+    "text-processing",
+    "nlp",
+    "linguistics",
+    "text-analysis",
+    "syllables",
+    "english",
+    "turkish",
 ]
-stanza = [
-    "stanza>=1.10.1"
-]
+license = { text = "MIT" }
+version = "0.1.0"
 
 [[project.authors]]
-name = "Tuğrul Güngör"
 email = "contact@tugrulgungor.me"
+name = "Tuğrul Güngör"
+
+[project.optional-dependencies]
+
+nltk = ["nltk>=3.9.1"]
+
+stanza = ["stanza>=1.10.1", "cmudict>=1.0.32"]
+
+dev = ["black>=23.0.0", "isort>=5.12.0", "mypy>=1.5.0", "pip-tools>=7.3.0"]
+
+test = ["pytest>=7.4.0", "pytest-cov>=4.1.0"]
+
+docs = ["sphinx>=7.0.0", "sphinx-rtd-theme>=1.3.0"]
+
+all = ["smoothtext[dev,test,docs,nltk,stanza]"]
 
 [project.urls]
 Documentation = "https://smoothtext.github.io"
 Homepage = "https://github.com/smoothtext/smoothtext"
 Issues = "https://github.com/smoothtext/smoothtext/issues"
 Source = "https://github.com/smoothtext/smoothtext"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["smoothtext"]
+
+[tool.setuptools.package-data]
+smoothtext = ["py.typed"]

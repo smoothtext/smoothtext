@@ -1,19 +1,19 @@
-#  SmoothText - https://smoothtext.tugrulgungor.me/
+#  SmoothText - https://github.com/smoothtext
 #
-#  Copyright (c) 2025 - present. All rights reserved.
+#  Copyright (c) 2025. All rights reserved.
 #  Tuğrul Güngör - https://tugrulgungor.me
 #
 #  Distributed under the MIT License.
 #  https://opensource.org/license/mit/
 
 from .backend import Backend
-from .formula import ReadabilityFormula
 from .language import Language
+from .readability import ReadabilityFormula
 from .smoothtext import SmoothText
 
-__version__ = SmoothText.version
+__version__ = (0, 1, 0)
 
-for module in (Backend, ReadabilityFormula, Language, SmoothText):
+for module in (Backend, Language, SmoothText):
     for attr in dir(module):
         if callable(getattr(module, attr)):
             if not attr.startswith("_"):

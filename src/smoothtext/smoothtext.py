@@ -1,391 +1,512 @@
-#  SmoothText - https://smoothtext.tugrulgungor.me/
+"""
+SmoothText - A Python library for natural language text analysis and readability scoring.
+
+This module provides functionality for:
+- Text tokenization (sentences and words)
+- Syllable counting and syllabification
+- Multiple readability formula calculations (Flesch, Ateşman, etc.)
+- Reading time estimation
+- Support for multiple languages and backend engines
+
+All functionality is exposed through the SmoothText class which handles the preparation
+of required resources and provides a consistent API across different backends.
+"""
+
+#  SmoothText - https://github.com/smoothtext
 #
-#  Copyright (c) 2025 - present. All rights reserved.
+#  Copyright (c) 2025. All rights reserved.
 #  Tuğrul Güngör - https://tugrulgungor.me
 #
 #  Distributed under the MIT License.
 #  https://opensource.org/license/mit/
-import pyphen
 
 from . import Backend
 from . import Language
 from . import ReadabilityFormula
+from .internal.syllabifier import (
+    SyllabifierEng,
+    SyllabifierTur,
+    _is_consonant,
+    _is_vowel,
+    _asciify,
+)
+from .internal.tokenizer import NLTKTokenizer, StanzaTokenizer
 
-import importlib
+import emoji
+from emoji.unicode_codes import load_from_json as load_emoji_codes
 import math
-import os
-from pyphen import Pyphen
-from types import ModuleType
-from unidecode import unidecode
+import logging
+
+_Prepared: dict[Backend, dict[Language, bool]] = {}
 
 
-def _is_consonant(c: str) -> bool:
-    return c in 'bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTUVWXY'
+def _prepare(
+    backend: Backend, language: Language, skip_downloads: bool, **backend_kwargs
+) -> None:
+    language = language.family()
 
+    logging.debug(f"Preparing backend {backend} for language {language}...")
 
-def _is_vowel(c: str) -> bool:
-    return c in 'aeiouAEIOU'
+    if backend not in _Prepared:
+        _Prepared[backend] = {}
 
+    backend_languages = _Prepared[backend]
+    if language in backend_languages:
+        downloaded = backend_languages[language]
+        if downloaded or not skip_downloads:
+            logging.debug(
+                f"Backend {backend} already prepared for language {language}. Skipping..."
+            )
+            return
 
-def _asciify(text: str) -> str:
-    return unidecode(string=text, errors='replace', replace_str='?')
+        logging.debug(
+            f"Backend {backend} already prepared for language {language} but download required..."
+        )
 
+    if skip_downloads:
+        _Prepared[backend][language] = False
+        logging.debug(
+            f"Skipping downloads for backend {backend} and marking language {language} as prepared."
+        )
+        return
 
-_Constants: dict[Language, tuple[float, float, float, float, float]] = {
-    Language.English: (206.835, 1.015, 84.6, 238.0, 183.0),
-    Language.Turkish: (198.825, 2.61, 40.175, 238.0, 183.0),
-}
+    if Backend.NLTK == backend:
+        was_downloaded = False
+        for language in backend_languages:
+            if backend_languages[language]:
+                was_downloaded = True
+                break
+
+        if was_downloaded:
+            logging.debug(f"NLTK data already downloaded. Skipping...")
+        else:
+            import nltk
+
+            for package in ("punkt", "cmudict"):
+                if not nltk.download(package, **backend_kwargs):
+                    logging.error("Failed to download NLTK data. Exiting...")
+                    return
+
+    elif Backend.Stanza == backend:
+        import stanza
+
+        stanza.download(lang=language.alpha2(), processors="tokenize", **backend_kwargs)
+
+    _Prepared[backend][language] = True
 
 
 class SmoothText:
     """
-    Smooth Text class.
+    Main class for text analysis and readability scoring.
+
+    The SmoothText class provides methods for:
+    - Text tokenization and counting (sentences, words, syllables)
+    - Readability scoring using various formulas
+    - Reading time estimation
+    - Language-specific text processing
+    - Emoji handling
+
+    Supported backends:
+    - NLTK
+    - Stanza
+
+    Supported languages:
+    - English
+    - Turkish
+
+    Examples:
+        >>> st = SmoothText(language="en", backend="nltk")
+        >>> score = st.flesch_reading_ease("This is a test sentence.")
+        >>> time = st.reading_time("Some text to analyze")
     """
 
-    # Public static fields.
-    version: tuple[int, int, int] = (0, 0, 17)
+    # Constants for Flesh Reading East & Ateşman.
+    __constants: dict[Language, tuple[float, float, float]] = {
+        Language.English: (206.835, 1.015, 84.6),
+        Language.Turkish: (198.825, 2.61, 40.175),
+    }
 
-    # Private static fields.
-    _languages: list[Language] = []
-    _backend: ModuleType | None = None
-    _backend_type: Backend | None = None
+    # Reading speed in words per minute. Unused, kept for reference.
+    __reading_speed: tuple[float, float] = (238.0, 183.0)
 
-    # Setup
+    # # # # #
+    # Setup #
+    # # # # #
     @staticmethod
-    def setup(backend: None | Backend | str = None,
-              languages: Language | list[Language] | str | list[str] | None = None, skip_downloads: bool = False,
-              **kwargs) -> None:
+    def prepare(
+        backend: Backend | str | None = None,
+        languages: Language | list[Language] | str | list[str] | None = None,
+        skip_downloads: bool = False,
+        silence_downloaders: bool = True,
+        **backend_kwargs,
+    ) -> None:
         """
-        Global setup function for the SmoothText class.
-        :param backend: Backend to use. Must be one of the following: `NLTK`, 'Stanza'. If `None`, the value is imported from the
-        environment variable `SMOOTHTEXT_BACKEND`.
-        :param languages: Language or languages to enable. This can be a single language code/name or a list of language
-        codes/names (e.g., `['English', 'Turkish']`). Only the resources for the specified languages will be imported.
-        If `None` or empty, all the supported languages are imported.
-        :param skip_downloads: If `True`, backend data is not downloaded. Default is False.
-        :param kwargs: Additional keyword arguments to pass to the backend's data downloader function.
-        :return: `None`. This function does not return anything but might raise exceptions.
+        Prepare the required resources for text analysis.
+
+        This method downloads and initializes the necessary language models and data
+        for the specified backend and languages. It must be called before using any
+        text analysis functionality.
+
+        Args:
+            backend: The backend engine to use (NLTK or Stanza)
+            languages: Language(s) to prepare resources for
+            skip_downloads: If True, skip downloading models even if not present
+            silence_downloaders: If True, suppress download progress output
+            **backend_kwargs: Additional arguments passed to backend downloaders
+
+        Raises:
+            RuntimeError: If preparation fails or no valid backends are found
+
+        Examples:
+            SmoothText.prepare(backend="nltk", languages=["en"])
         """
 
-        # Languages
+        # Languages.
         if languages is None:
             languages = Language.values()
-        elif isinstance(languages, str):
-            languages = languages.split(',')
-        elif isinstance(languages, Language):
-            languages = [languages]
+        else:
+            languages = Language.parse_multiple(languages)
+            if 0 == len(languages):
+                logging.warning("No languages to enable. Defaulting to all languages.")
+                languages = Language.values()
 
-        for i in range(len(languages)):
-            languages[i] = Language.parse(languages[i])
-
-        SmoothText._languages = languages
-
-        # Backend
+        # Backend.
         if backend is None:
-            backend = os.environ.get('SMOOTHTEXT_BACKEND')
+            backends = Backend.list_supported()
+            if 0 == len(backends):
+                logging.error("No backends to prepare. Exiting...")
+                return
 
-        backend = Backend.parse(backend)
+            backend = backends[0]
+            logging.info(f"No backend specified. Defaulting to {backend}.")
+        else:
+            backend = Backend.parse(backend)
+            if backend is None:
+                logging.warning("No valid backend to prepare. Exiting...")
 
-        if not Backend.is_supported(backend):
-            raise RuntimeError(f"Backend {backend} is not supported.")
+            if not Backend.is_supported(backend):
+                logging.warning(f"Backend {backend} not supported. Exiting...")
+                return
 
+        # Feedback.
+        logging.debug(f"Preparing {backend} for {languages}...")
+
+        # Download backend data.
+        if silence_downloaders:
+            if Backend.NLTK == backend:
+                if "quiet" not in backend_kwargs:
+                    backend_kwargs["quiet"] = True
+            elif Backend.Stanza == backend:
+                if "verbose" not in backend_kwargs:
+                    backend_kwargs["verbose"] = False
+
+                if "logging_level" not in backend_kwargs:
+                    backend_kwargs["logging_level"] = logging.FATAL
+
+        for language in languages:
+            _prepare(backend, language, skip_downloads, **backend_kwargs)
+
+    @staticmethod
+    def is_ready(backend: Backend | str, language: Language | str) -> bool:
+        """
+        Check if the backend is ready for the specified language.
+
+        :param backend: Backend to check.
+        :param language: Language to check.
+        :return: True if the backend is ready for the language, False otherwise.
+        """
+
+        return backend in _Prepared and language in _Prepared[backend]
+
+    # # # # # # # #
+    # Properties  #
+    # # # # # # # #
+    # Backend
+    @property
+    def backend(self) -> Backend:
+        """
+        Get the backend of the SmoothText instance.
+
+        :return: Backend of the SmoothText instance.
+        """
+
+        return self.__backend
+
+    def __configure_backend(self, backend: Backend) -> None:
         if Backend.NLTK == backend:
-            try:
-                nltk = importlib.import_module('nltk')
-
-                if not skip_downloads:
-                    if not nltk.download('punkt_tab', **kwargs):
-                        raise ImportError('Could not download NLTK data.')
-
-                globals()['nltk'] = nltk
-                SmoothText._backend = nltk
-            except ModuleNotFoundError:
-                raise ModuleNotFoundError('NLTK is not installed.')
+            self.__tokenizer = NLTKTokenizer(self.__language.family().value.lower())
 
         if Backend.Stanza == backend:
-            try:
-                stanza = importlib.import_module('stanza')
+            self.__tokenizer = StanzaTokenizer(self.__language.alpha2())
 
-                if not skip_downloads:
-                    for l in languages:
-                        print('stanza.download', l)
-                        stanza.download(lang=l.alpha2(), **kwargs)
-
-                SmoothText._stanza = stanza
-            except ModuleNotFoundError:
-                raise ModuleNotFoundError('Stanza is not installed.')
-
-        SmoothText._backend_type = backend
-
-    # Constructor
-    def __init__(self, language: Language | str | None = None):
-        """
-        Default constructor for the SmoothText class.
-        :param language: Default language to use.
-        """
-
-        if SmoothText._backend_type is None or 0 == len(SmoothText._languages):
-            raise Exception('Call SmoothText.setup() first.')
-
-        if language is None:
-            language = SmoothText._languages[0]
-        else:
-            language = Language.parse(language)
-
-        self._set_language(language)
-
-    # Instance language.
+    # Language
     @property
     def language(self) -> Language:
         """
-        Getter for the current language.
-        :return: Current language.
+        Get the language of the SmoothText instance.
+
+        :return: Language of the SmoothText instance.
         """
 
-        return self._language
+        return self.__language
 
     @language.setter
     def language(self, language: Language | str) -> None:
         """
-        Setter for the current language.
-        :param language: New language.
+        Set the language of the SmoothText instance.
+
+        :param language: Language to set.
+        :return: None
         """
 
-        self._set_language(Language.parse(language))
+        language = Language.parse(language)
+        if language is None:
+            logging.fatal("Invalid language.")
 
-    def _set_callbacks(self) -> None:
-        if SmoothText._backend_type == Backend.NLTK:
-            self._sentencize = self._sentencize_nltk
-            self._tokenize = self._tokenize_nltk
-        elif SmoothText._backend_type == Backend.Stanza:
-            self._backend = self._stanza.Pipeline(lang=self._language.alpha2(), processors='tokenize',
-                                                  verbose=False,
-                                                  download_method=self._stanza.DownloadMethod.REUSE_RESOURCES)
+        # TODO: Requires improvement.
+        SmoothText.prepare(
+            backend=self.__backend,
+            languages=language,
+            skip_downloads=False,
+            silence_downloaders=True,
+        )
 
-            self._sentencize = self._sentencize_stanza
-            self._tokenize = self._tokenize_stanza
+        self.__configure_language(language)
 
-        if Language.English == self.language:
-            self._syllable_tokenizer = self._syllabify_eng
-            self._syllable_helper = pyphen.Pyphen(lang='en')
-        elif Language.Turkish == self.language:
-            self._syllable_tokenizer = self._syllabify_tur
-            self._syllable_helper = None
+    def __configure_language(self, language: Language) -> None:
+        # English
+        if Language.English == language:
+            language = Language.English_GB
 
-    def _set_language(self, language: Language) -> None:
-        if language not in SmoothText._languages:
-            raise ValueError(f'Invalid language: {language}. Make sure the language was included in the setup.')
+        if Language.English == language.family():
+            self.__syllabifier = SyllabifierEng(self.__backend, language)
 
-        self._language = language
-        self._language_value = self._language.value.lower()
+        # Turkish
+        if Language.Turkish == language:
+            language = Language.Turkish_TR
 
-        self._constants = _Constants[self._language]
+        if Language.Turkish == language.family():
+            self.__syllabifier = SyllabifierTur()
 
-        return self._set_callbacks()
+        # Constants
+        self.__language = language
+        self._constants = SmoothText.__constants[self.__language.family()]
 
-    # Sentence-based operations.
-    def _sentencize_nltk(self, text: str) -> list[str]:
-        return SmoothText._backend.sent_tokenize(text, self._language_value)
+        # Backend
+        self.__configure_backend(self.__backend)
 
-    def _sentencize_stanza(self, text: str) -> list[str]:
-        sentences: list[str] = []
+    # # # # # # #
+    # Operators #
+    # # # # # # #
+    # Constructor.
+    def __init__(
+        self,
+        language: Language | str | None = None,
+        backend: Backend | str | None = None,
+    ) -> None:
+        # Find backend and language.
+        backend = Backend.parse(backend)
+        language = Language.parse(language)
 
-        doc = self._backend(text)
-        for sentence in doc.sentences:
-            sentences.append(sentence.text)
+        if backend is None and language is None:
+            raise RuntimeError("Both backend and language are invalid. Exiting...")
 
-        return sentences
+        # TODO: Requires improvement.
+        SmoothText.prepare(
+            backend=backend,
+            languages=language,
+            skip_downloads=False,
+            silence_downloaders=True,
+        )
 
+        # Initialize.
+        self.__backend = backend
+        self.__configure_language(language)
+
+    # Call.
+    def __call__(self, *args, **kwargs):
+        return self.compute_readability(*args, **kwargs)
+
+    # # # # # # # # #
+    # Tokenization  #
+    # # # # # # # # #
+    # Sentence level.
     def sentencize(self, text: str) -> list[str]:
         """
-        Breaks down the `text` into sentences.
-        :param text: Text to break down into sentences.
-        :return: List of sentences.
-        """
+        Split text into sentences using the configured backend tokenizer.
 
-        return self._sentencize(text)
+        Args:
+            text: Input text to split into sentences
+
+        Returns:
+            list[str]: List of sentences found in the text
+
+        Examples:
+            >>> sentences = st.sentencize("This is a test. Another sentence.")
+            >>> # Returns: ["This is a test.", "Another sentence."]
+        """
+        return self.__tokenizer.sentencize(text)
 
     def count_sentences(self, text: str) -> int:
         """
-        Counts the number of sentences in the `text`.
-        :param text: Text to be counted.
-        :return: Number of sentences.
-        """
+        Count the number of sentences in the input text.
 
+        Args:
+            text: Input text to analyze
+
+        Returns:
+            int: Number of sentences detected
+
+        Examples:
+            >>> count = st.count_sentences("This is one. This is two.")
+            >>> # Returns: 2
+        """
         return len(self.sentencize(text))
 
-    # Token/word-based operations.
-    def _extract_words(self, text: str) -> list[str]:
-        tokens: list[str] = self.tokenize(text)
+    # Word level.
+    def tokenize(
+        self, text: str, split_sentences: bool = False
+    ) -> list[str] | list[list[str]]:
+        """
+        Tokenize text into words using the configured backend tokenizer.
 
-        words: list[str] = []
+        Args:
+            text: Input text to tokenize
+            split_sentences: If True, return tokens grouped by sentences
+
+        Returns:
+            list[str]: List of tokens if split_sentences=False
+            list[list[str]]: List of sentences containing lists of tokens if split_sentences=True
+
+        Examples:
+            >>> tokens = st.tokenize("Hello world!")
+            >>> # Returns: ["Hello", "world", "!"]
+            >>>
+            >>> sent_tokens = st.tokenize("Hi there. Bye now.", split_sentences=True)
+            >>> # Returns: [["Hi", "there", "."], ["Bye", "now", "."]]
+        """
+        return self.__tokenizer.tokenize(text, split_sentences)
+
+    @staticmethod
+    def __filter_words(tokens: list[str]) -> list[str]:
+        return [word for word in tokens if word.isalnum()]
+
+    @staticmethod
+    def __count_words(tokens: list[str]) -> int:
+        num_words: int = 0
+
         for token in tokens:
-            for c in token:
-                if c.isalnum():
-                    words.append(token)
-                    break
+            if token.isalnum():
+                num_words += 1
 
-        return words
-
-    def _tokenize_nltk(self, text: str) -> list[str]:
-        return self._backend.word_tokenize(text, self._language_value)
-
-    def _tokenize_stanza(self, text: str) -> list[str]:
-        tokens: list[str] = []
-
-        doc = self._backend(text)
-        for sentence in doc.sentences:
-            for token in sentence.tokens:
-                tokens.append(token.text)
-
-        return tokens
-
-    def tokenize(self, text: str) -> list[str]:
-        """
-        Breaks down the `text` into tokens.
-        :param text: Text to break down into tokens.
-        :return: The list of tokens.
-        """
-
-        return self._tokenize(text)
+        return num_words
 
     def count_words(self, text: str) -> int:
         """
-        Counts the number of words in the `text`.
-        :param text: Text to count words from.
-        :return: Number of words.
+        Count the number of words in the text. This function counts the number of alphanumeric tokens retrieved from the
+        tokenize method.
+
+        Args:
+            text: Input text to count words from
+
+        Returns:
+            int: Number of alphanumeric words found
+
+        Examples:
+            >>> count = st.count_words("Hello, world!")  # Returns: 2
         """
+        tokens = self.tokenize(text, False)
+        return SmoothText.__count_words(tokens)
 
-        tokens: list[str] = self.tokenize(text)
-
-        count: int = 0
-        for token in tokens:
-            for c in token:
-                if c.isalnum():
-                    count += 1
-                    break
-
-        return count
-
-    # Syllable-based operations.
-    def _syllabify_eng(self, token: str) -> list[str]:
-        return self._syllable_helper.inserted(word=_asciify(token), hyphen='\0').split('\0')
-
-    @staticmethod
-    def _syllabify_tur(token: str) -> list[str]:
-        syllables: list[str] = []
-
-        if 0 == len(token):
-            return syllables
-
-        token_: str = _asciify(''.join(c if c.isalnum() else ' ' for c in token))
-        if len(token_) != len(token):
-            raise UnicodeError(f'Invalid syllable token: {token}.')
-
-        previous: int = len(token_)
-        index: int = len(token_) - 1
-        while index >= 0:
-            c = token_[index]
-
-            if ' ' == c:
-                syllables.append(token[index])
-                index -= 1
-                previous -= 1
-                continue
-
-            if _is_vowel(c):
-                if 0 == index:
-                    syllables.append(token[0:previous])
-                    previous = 0
-                    break
-
-                c2 = token_[index - 1]
-                if _is_consonant(c2):
-                    index -= 1
-
-                syllables.append(token[index:previous])
-                previous = index
-
-            index -= 1
-
-        if 0 != previous:
-            syllables.append(token[0:previous])
-
-        syllables.reverse()
-        return syllables
-
-    def syllabify(self, token: str, filter_words: bool = True) -> list[str] | list[list[str]]:
+    # Syllable level.
+    def syllabify(
+        self, word: str, tokenize: bool = False, sentencize: bool = False
+    ) -> list[str] | list[list[str]] | list[list[list[str]]]:
         """
-        Breaks down the `token` into syllables.
-        :param token: Token to syllabify.
-        :param filter_words: If `True`, only return syllables that are part of alphanumeric words.
-        :return: List of syllables.
-        :remark: If token is in fact a list of tokens (phrase, sentence, etc.), each is syllabified separately.
+        Split words into syllables using language-specific rules.
+
+        This method can operate on single words, lists of words, or lists of sentences containing words. However, for
+        simple counting, it is recommended to use the count_syllables method as it is more efficient and accurate. This
+        method will keep punctuation marks as separate tokens.
+
+        Args:
+            word: Input word or text to syllabify
+            tokenize: If True, split input into words first
+            sentencize: If True, split input into sentences first
+
+        Returns:
+            list[str]: List of syllables for a single word
+            list[list[str]]: List of words with their syllables if tokenize=True
+            list[list[list[str]]]: List of sentences containing words with syllables if sentencize=True
+
+        Examples:
+            >>> syllables = st.syllabify("hello")
+            >>> # Returns: ["hel", "lo"]
+
+            >>> word_syllables = st.syllabify("hello world", tokenize=True)
+            >>> # Returns: [["hel", "lo"], ["world"]]
         """
+        if not tokenize and not sentencize:
+            return self.__syllabifier.syllabify(word)
 
-        syllables: list[list[str]] = []
+        tokens = self.tokenize(text=word, split_sentences=sentencize)
+        if not sentencize:
+            res: list[list[str]] = []
 
-        tokens: list[str] = self.tokenize(token)
-        for token in tokens:
-            token_syllables: list[str] = self._syllable_tokenizer(token)
-
-            if filter_words:
-                token_syllables = [s for s in token_syllables if s.isalnum()]
-
-            if 0 == len(token_syllables):
-                continue
-
-            syllables.append(token_syllables)
-
-        if 1 == len(syllables):
-            return syllables[0]
-
-        return syllables
-
-    def count_syllables(self, text: str, filter_words: bool = True) -> int:
-        """
-        Counts the number of syllables in the `text`.
-        :param text: Text to be counted.
-        :param filter_words: If `True`, only count syllables that are part of alphanumeric words.
-        :return: Number of syllables.
-        """
-
-        num_syllables: int = 0
-
-        sentences: list[str] = self.sentencize(text)
-        for sentence in sentences:
-            tokens = self.tokenize(sentence)
             for token in tokens:
-                num_syllables += len(self.syllabify(token, filter_words))
+                res.append(self.__syllabifier.syllabify(token))
 
-        return num_syllables
+            return res
+        else:
+            res: list[list[list[str]]] = []
+            for sentence in tokens:
+                words: list[list[str]] = []
 
-    # Letter-based operations.
-    @staticmethod
-    def count_vowels(text: str) -> int:
+                for token in sentence:
+                    words.append(self.__syllabifier.syllabify(token))
+
+                res.append(words)
+
+            return res
+
+    def count_syllables(self, word: str, tokenize: bool = True) -> int:
         """
-        Counts the number of vowels in the `text`.
-        :param text: Text to be counted.
-        :return: Number of vowels.
+        Count the number of syllables in a word or text.
+
+        Args:
+            word: Input word or text to analyze
+            tokenize: If True, tokenize input text and count syllables for each word
+
+        Returns:
+            int: Total number of syllables found
+
+        Examples:
+            >>> count = st.count_syllables("hello")  # Returns: 2
+            >>> count = st.count_syllables("hello world", tokenize=True)  # Returns: 3
         """
+        if tokenize or " " in word:
+            tokens: list[str] = self.tokenize(text=word, split_sentences=False)
+            return sum(
+                [self.count_syllables(word=token, tokenize=False) for token in tokens]
+            )
 
-        count: int = 0
+        return self.__syllabifier.count(word.lower().strip())
 
-        text = _asciify(text)
-        for c in text:
-            if _is_vowel(c):
-                count += 1
-
-        return count
-
+    # Character level.
     @staticmethod
     def count_consonants(text: str) -> int:
         """
-        Counts the number of consonants in the `text`.
-        :param text: Text to be counted.
-        :return: Number of consonants.
-        """
+        Count the number of consonants in the text after converting to ASCII.
 
+        Args:
+            text: Input text to analyze
+
+        Returns:
+            int: Number of consonant characters found
+
+        Examples:
+            >>> count = st.count_consonants("hello")  # Returns: 3
+        """
         count: int = 0
 
         text = _asciify(text)
@@ -395,56 +516,274 @@ class SmoothText:
 
         return count
 
-    # Readability
-    def _avg_syllables_and_words(self, sentences: list[str]) -> tuple[float, float, int]:
+    @staticmethod
+    def count_vowels(text: str) -> int:
+        """
+        Count the number of vowels in the text after converting to ASCII.
+
+        Args:
+            text: Input text to analyze
+
+        Returns:
+            int: Number of vowel characters found
+
+        Examples:
+            >>> count = st.count_vowels("hello")  # Returns: 2
+        """
+        count: int = 0
+
+        text = _asciify(text)
+        for c in text:
+            if _is_vowel(c):
+                count += 1
+
+        return count
+
+    def demojize(self, text: str, delimiters: tuple[str, str] = ("(", ")")) -> str:
+        """
+        Convert emoji characters to their text descriptions.
+
+        Args:
+            text: Input text containing emojis
+            delimiters: Tuple of (open, close) delimiters to wrap emoji descriptions
+
+        Returns:
+            str: Text with emojis replaced by their descriptions
+
+        Examples:
+            >>> text = st.demojize("I love 🐈")
+            >>> # Returns: "I love (cat)"
+        """
+        _emojis: list[str] = emoji.distinct_emoji_list(text)
+        if 0 == len(_emojis):
+            return text
+
+        for _emoji in _emojis:
+            _str = (
+                delimiters[0]
+                + emoji.demojize(
+                    string=_emoji,
+                    delimiters=("", ""),
+                    language=self.__language.alpha2(),
+                ).replace("_", " ")
+                + delimiters[1]
+            )
+
+            text = text.replace(_emoji, _str)
+
+        return text
+
+    # # # # # # # #
+    # Readability #
+    # # # # # # # #
+    # Helpers.
+    @staticmethod
+    def __test_formula_langauge(
+        formula: ReadabilityFormula, language: Language
+    ) -> bool:
+        if not formula.supports(language):
+            logging.warning(
+                f"Language and readability formula mismatch. {formula} cannot be used to measure the readability of texts in {language}."
+            )
+
+            return False
+
+        return True
+
+    def __compute_1(self, text: str) -> tuple[float, float]:
+        # This method returns:
+        #   - average word syllables
+        #   - average sentence length
+
         total_words: int = 0
         total_syllables: int = 0
         num_sentences: int = 0
 
+        # Tokenize the text into words and sentences.
+        sentences: list[list[str]] = self.tokenize(text=text, split_sentences=True)
+
+        # Perform calculations.
         for sentence in sentences:
-            num_words = self.count_words(sentence)
-            num_syllables = self.count_syllables(sentence, filter_words=True)
+            words: list[str] = SmoothText.__filter_words(sentence)
 
-            if 0 != num_words and 0 != num_syllables:
-                total_words += num_words
-                total_syllables += num_syllables
-                num_sentences += 1
-
-        if 0 == num_sentences:
-            return 0.0, 0.0, 0
-
-        avg_word_syllables: float = float(total_syllables) / float(total_words)
-        avg_sentence_length: float = float(total_words) / float(num_sentences)
-        return avg_word_syllables, avg_sentence_length, num_sentences
-
-    def _syllable_frequencies(self, sentences: list[str]) -> dict[int, int]:
-        frequencies: dict[int, int] = {
-            3: 0,
-            4: 0,
-            5: 0,
-            6: 0
-        }
-
-        for sentence in sentences:
-            syllables = self.syllabify(sentence, filter_words=True)
-            if 0 == len(syllables):
+            if 0 == len(words):
                 continue
 
-            if isinstance(syllables[0], str):
-                num_syllables: int = min(len(syllables), 6)
-                if 3 <= num_syllables:
-                    frequencies[num_syllables] += 1
-            else:
-                for group in syllables:
-                    num_syllables: int = min(len(group), 6)
-                    if 3 <= num_syllables:
-                        frequencies[num_syllables] += 1
+            num_sentences += 1
+            total_words += len(words)
+            for word in words:
+                total_syllables += self.count_syllables(word=word, tokenize=False)
 
-        return frequencies
+        # Check if no valid sentences were found. This avoids division by zero.
+        if 0 == num_sentences:
+            return 0.0, 0.0
 
-    def _bezirci_yilmaz(self, sentences: list[str]) -> float:
-        avg_word_syllables, avg_sentence_length, num_sentences = self._avg_syllables_and_words(sentences)
-        syllable_frequencies = self._syllable_frequencies(sentences)
+        # Return the result.
+        return (float(total_syllables) / float(total_words)), (
+            float(total_words) / float(num_sentences)
+        )
+
+    def __compute_2(self, text: str) -> tuple[float, float, int, dict[int, int]]:
+        # This method returns:
+        #   - average word syllables
+        #   - average sentence length
+        #   - number of sentences
+        #   - syllable frequencies
+
+        total_words: int = 0
+        total_syllables: int = 0
+        num_sentences: int = 0
+        syllable_frequencies: dict[int, int] = {3: 0, 4: 0, 5: 0, 6: 0}
+
+        # Tokenize the text into words and sentences.
+        sentences: list[list[str]] = self.tokenize(text=text, split_sentences=True)
+
+        # Perform calculations.
+        for sentence in sentences:
+            words: list[str] = SmoothText.__filter_words(sentence)
+
+            if 0 == len(words):
+                continue
+
+            num_sentences += 1
+            total_words += len(words)
+            for word in words:
+                word_syllable_count = self.count_syllables(word=word, tokenize=False)
+                total_syllables += word_syllable_count
+
+                if 3 <= word_syllable_count:
+                    if word_syllable_count > 6:
+                        word_syllable_count = 6
+
+                    syllable_frequencies[word_syllable_count] += 1
+
+        # Check if no valid sentences were found. This avoids division by zero.
+        if 0 == num_sentences:
+            return 0.0, 0.0, 0, {}
+
+        # Return the result.
+        return (
+            (float(total_syllables) / float(total_words)),
+            (float(total_words) / float(num_sentences)),
+            num_sentences,
+            syllable_frequencies,
+        )
+
+    # Flesch Reading Ease & Ateşman.
+    def __flesch_reading_ease(self, text: str) -> float:
+        avg_word_syllables, avg_sentence_length = self.__compute_1(text)
+        return (
+            self._constants[0]
+            - (self._constants[1] * avg_sentence_length)
+            - (self._constants[2] * avg_word_syllables)
+        )
+
+    def flesch_reading_ease(self, text: str, demojize: bool = False) -> float:
+        """
+        Calculate Flesch Reading Ease score for the text.
+        The score typically ranges between 0-100, though scores outside this range are possible.
+        Higher scores indicate easier readability.
+
+        Score ranges:
+        90-100: Very easy
+        80-89: Easy
+        70-79: Fairly easy
+        60-69: Standard
+        50-59: Fairly difficult
+        30-49: Difficult
+        0-29: Very difficult
+
+        Args:
+            text: Input text to analyze
+            demojize: If True, convert emojis to text before scoring
+
+        Returns:
+            float: Flesch Reading Ease score (higher = easier to read)
+
+        Examples:
+            >>> score = st.flesch_reading_ease("Simple text is easy to read.")
+        """
+        if not SmoothText.__test_formula_langauge(
+            ReadabilityFormula.Flesch_Reading_Ease, self.__language
+        ):
+            return 0.0
+
+        if demojize:
+            text = self.demojize(text)
+
+        return self.__flesch_reading_ease(text=text)
+
+    def atesman(self, text: str, demojize: bool = False) -> float:
+        """
+        Calculate Ateşman readability score for Turkish text.
+        The score typically ranges between 0-100, though scores outside this range are possible.
+        Higher scores indicate easier readability.
+
+        Score ranges:
+        90-100: Very easy
+        70-89: Easy
+        50-69: Medium difficulty
+        30-49: Difficult
+        1-29: Very difficult
+
+        Args:
+            text: Input Turkish text to analyze
+            demojize: If True, convert emojis to text before scoring
+
+        Returns:
+            float: Ateşman readability score (higher = easier to read)
+
+        Examples:
+            >>> score = st.atesman("Basit bir Türkçe metin.")
+        """
+        if not SmoothText.__test_formula_langauge(
+            ReadabilityFormula.Atesman, self.__language
+        ):
+            return 0.0
+
+        if demojize:
+            text = self.demojize(text)
+
+        return self.__flesch_reading_ease(text=text)
+
+    # Flesch-Kincaid Grade +Simplified.
+    def __flesch_kincaid_grade(self, text: str) -> float:
+        avg_word_syllables, avg_sentence_length = self.__compute_1(text)
+        return (0.39 * avg_sentence_length) + (11.8 * avg_word_syllables) - 15.9
+
+    def flesch_kincaid_grade(self, text: str, demojize: bool = False) -> float:
+        if not SmoothText.__test_formula_langauge(
+            ReadabilityFormula.Flesch_Kincaid_Grade, self.__language
+        ):
+            return 0.0
+
+        if demojize:
+            text = self.demojize(text)
+
+        return self.__flesch_kincaid_grade(text=text)
+
+    def __flesch_kincaid_grade_simplified(self, text: str) -> float:
+        avg_word_syllables, avg_sentence_length = self.__compute_1(text)
+        return (0.4 * avg_sentence_length) + (12.0 * avg_word_syllables) - 16.0
+
+    def flesch_kincaid_grade_simplified(
+        self, text: str, demojize: bool = False
+    ) -> float:
+        if not SmoothText.__test_formula_langauge(
+            ReadabilityFormula.Flesch_Kincaid_Grade_Simplified, self.__language
+        ):
+            return 0.0
+
+        if demojize:
+            text = self.demojize(text)
+
+        return self.__flesch_kincaid_grade_simplified(text=text)
+
+    # Bezirci-Yılmaz
+    def __bezirci_yilmaz(self, text: str) -> float:
+        _, avg_sentence_length, num_sentences, syllable_frequencies = self.__compute_2(
+            text
+        )
 
         score: float = 0.0
         score += (float(syllable_frequencies[3]) / float(num_sentences)) * 0.84
@@ -454,84 +793,149 @@ class SmoothText:
 
         return math.sqrt(avg_sentence_length * score)
 
-    def _flesch_reading_ease(self, sentences: list[str]) -> float:
-        avg_word_syllables, avg_sentence_length, _ = self._avg_syllables_and_words(sentences)
-        return self._constants[0] - (self._constants[1] * avg_sentence_length) - (
-                self._constants[2] * avg_word_syllables)
-
-    def _flesch_kincaid_grade(self, sentences: list[str]) -> float:
-        avg_word_syllables, avg_sentence_length, _ = self._avg_syllables_and_words(sentences)
-        return (0.39 * avg_sentence_length) + (11.8 * avg_word_syllables) - 15.59
-
-    def _flesch_kincaid_grade_simplified(self, sentences: list[str]) -> float:
-        avg_word_syllables, avg_sentence_length, _ = self._avg_syllables_and_words(sentences)
-        return (0.4 * avg_sentence_length) + (12.0 * avg_word_syllables) - 16.0
-
-    def compute_readability(self, text: str, formula: ReadabilityFormula) -> float:
+    def bezirci_yilmaz(self, text: str, demojize: bool = False) -> float:
         """
-        Computes the readability score of the `text` using `formula`.
-        :param text: Text to compute the readability score of.
-        :param formula: `ReadabilityFormula` to use.
-        :return: Readability score.
+        Calculate Bezirci-Yılmaz readability score for Turkish text.
+        The score takes into account sentence length and frequency of words with 3+ syllables.
+        Higher scores indicate more difficult readability.
+
+        Args:
+            text: Input Turkish text to analyze
+            demojize: If True, convert emojis to text before scoring
+
+        Returns:
+            float: Bezirci-Yılmaz readability score (higher = more difficult)
+
+        Examples:
+            >>> score = st.bezirci_yilmaz("Türkçe metin örneği.")
         """
+        if not SmoothText.__test_formula_langauge(
+            ReadabilityFormula.Bezirci_Yilmaz, self.__language
+        ):
+            return 0.0
 
-        sentences: list[str] = self.sentencize(text)
+        if demojize:
+            text = self.demojize(text)
 
-        if ReadabilityFormula.Atesman == formula or ReadabilityFormula.Flesch_Reading_Ease == formula:
-            return self._flesch_reading_ease(sentences)
+        return self.__bezirci_yilmaz(text=text)
 
-        if Language.Turkish == self._language:
-            if ReadabilityFormula.Bezirci_Yilmaz == formula or ReadabilityFormula.Flesch_Kincaid_Grade == formula:
-                return self._bezirci_yilmaz(sentences)
-
-        if Language.English == self._language:
-            if ReadabilityFormula.Flesch_Kincaid_Grade == formula or ReadabilityFormula.Bezirci_Yilmaz == formula:
-                return self._flesch_kincaid_grade(sentences)
-
-            if ReadabilityFormula.Flesch_Kincaid_Grade_Simplified == formula:
-                return self._flesch_kincaid_grade_simplified(sentences)
-
-        raise ValueError(
-            f'Invalid language and formula pair: {self._language.value} and {formula.value} does not work together.')
-
-    def __call__(self, text: str, formula: ReadabilityFormula) -> float:
+    # Generic.
+    def compute_readability(
+        self, text: str, formula: ReadabilityFormula, demojize: bool = False
+    ) -> float:
         """
-        Computes the readability score of the `text` using `formula`.
-        :param text: Text to compute the readability score of.
-        :param formula: `ReadabilityFormula` to use.
-        :return: Readability score.
+        Calculate readability score using the specified formula.
+
+        Args:
+            text: Input text to analyze
+            formula: ReadabilityFormula to use for scoring
+            demojize: If True, convert emojis to text descriptions before scoring
+
+        Returns:
+            float: Readability score (higher scores generally indicate easier readability)
+
+        Supported formulas:
+        - Flesch Reading Ease (English, Turkish)
+        - Ateşman (Turkish)
+        - Flesch-Kincaid Grade Level (English)
+        - Bezirci-Yılmaz (Turkish)
+
+        Examples:
+            >>> score = st.compute_readability(text, ReadabilityFormula.Flesch_Reading_Ease)
         """
+        # TODO Might reduce the number of ifs.
+        if not formula.supports(self.__language):
+            logging.warning(
+                f"Language and readability formula mismatch. {formula} cannot be used to measure the readability of texts in {self.__language}."
+            )
+            return 0.0
 
-        return self.compute_readability(text, formula)
+        # Basic transformations.
+        if demojize:
+            text = self.demojize(text=text)
 
-    # Reading time
-    def _reading_time(self, text: str, wpm: float, round_up: bool) -> float | int:
-        seconds: float = float(self.count_words(text)) / wpm * 60.0
-        if round_up:
-            return int(math.ceil(seconds))
+        # Redirections.
+        if (
+            ReadabilityFormula.Atesman == formula
+            or ReadabilityFormula.Flesch_Reading_Ease == formula
+        ):
+            return self.__flesch_reading_ease(text=text)
 
-        return seconds
+        if ReadabilityFormula.Flesch_Kincaid_Grade == formula:
+            return self.__flesch_kincaid_grade(text=text)
 
-    def silent_reading_time(self, text: str, words_per_minute: float = 0.0, round_up: bool = False) -> float | int:
+        if ReadabilityFormula.Flesch_Kincaid_Grade_Simplified == formula:
+            return self.__flesch_kincaid_grade_simplified(text=text)
+
+        return 0.0
+
+    # # # # # # # # #
+    # Reading Time  #
+    # # # # # # # # #
+    def __reading_time(
+        self, text: str, words_per_minute: float, round_up: bool
+    ) -> float:
+        seconds: float = float(self.count_words(text=text)) / words_per_minute * 60.0
+        return math.ceil(seconds) if round_up else seconds
+
+    def reading_time(
+        self, text: str, words_per_minute: float, round_up: bool = True
+    ) -> float:
         """
-        Computes the reading time of the `text` using `words_per_minute`.
-        :param text: Text to compute the reading time of.
-        :param words_per_minute: Number of words per minute. If lower than `1.0`, set to `238.0`.
-        :param round_up: If `True`, the reading time is rounded up and returned as `int`.
-        :return: Reading time in seconds.
-        """
+        Calculate estimated reading time for the text.
 
-        return self._reading_time(text, _Constants[self._language][3] if words_per_minute < 1.0 else words_per_minute,
-                                  round_up)
+        Args:
+            text: Input text to analyze
+            words_per_minute: Reading speed in words per minute
+            round_up: If True, round result up to nearest second
 
-    def reading_aloud_time(self, text: str, words_per_minute: float = 0.0, round_up: bool = False) -> float | int:
-        """
-        Computes the reading time of the `text` using `words_per_minute`.
-        :param text: Text to compute the reading time of.
-        :param words_per_minute: Number of words per minute. If lower than `1.0`, set to `183.0`.
-        :param round_up: If `True`, the reading time is rounded up and returned as `int`.
-        :return: Reading time in seconds.
-        """
+        Returns:
+            float: Estimated reading time in seconds
 
-        return self._reading_time(text, _Constants[self._language][4] if words_per_minute < 1.0 else words_per_minute,
-                                  round_up)
+        Examples:
+            >>> time = st.reading_time("Some text to read", words_per_minute=200)
+        """
+        if 1.0 > words_per_minute:
+            words_per_minute = 1.0
+
+        return self.__reading_time(
+            text=text, words_per_minute=words_per_minute, round_up=round_up
+        )
+
+    def silent_reading_time(
+        self, text: str, words_per_minute: float = 238.0, round_up: bool = True
+    ) -> float:
+        """
+        Calculate estimated silent reading time using default reading speed.
+        Default speed is 238 WPM based on research averages.
+
+        Args:
+            text: Input text to analyze
+            words_per_minute: Optional custom reading speed
+            round_up: If True, round result up to nearest second
+
+        Returns:
+            float: Estimated silent reading time in seconds
+        """
+        return self.reading_time(
+            text=text, words_per_minute=words_per_minute, round_up=round_up
+        )
+
+    def reading_aloud_time(
+        self, text: str, words_per_minute: float = 183.0, round_up: bool = True
+    ) -> float:
+        """
+        Calculate estimated reading aloud time using default speaking speed.
+        Default speed is 183 WPM based on research averages.
+
+        Args:
+            text: Input text to analyze
+            words_per_minute: Optional custom speaking speed
+            round_up: If True, round result up to nearest second
+
+        Returns:
+            float: Estimated speaking time in seconds
+        """
+        return self.reading_time(
+            text=text, words_per_minute=words_per_minute, round_up=round_up
+        )

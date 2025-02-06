@@ -1,11 +1,9 @@
-# Editor
-.env
 .idea
+.pytest_cache
+.venv
+.vscode
 
-# Builds
 dist
+docs
 *__pycache__*
 *.egg*
-
-# Tests (must be updated)
-test

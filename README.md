@@ -9,14 +9,9 @@
 
 ---
 
-> SmoothText is still in alpha and there may be breaking changes.
-
----
-
 ## Introduction
 
-SmoothText is a Python library for calculating readability scores of texts and statistical information for texts in
-multiple languages.
+SmoothText is a Python library for calculating readability scores of texts and statistical information for texts in multiple languages.
 
 The design principle of this library is to ensure high accuracy.
 
@@ -30,6 +25,7 @@ Python 3.10 or higher.
 |:------------------------------------------------:|:----------:|:----------------------------:|-------------------------|
 |          [NLTK](https://www.nltk.org/)           | `>=3.9.1`  |         `Apache 2.0`         | Conditionally optional. |
 | [Stanza](https://stanfordnlp.github.io/stanza/)  | `>=1.10.1` |         `Apache 2.0`         | Conditionally optional. |
+| [CMUdict](https://pypi.org/project/cmudict/)  | `>=1.0.32` |         `Apache 2.0`         | Required if `Stanza` is the selected backend. |
 | [Unidecode](https://pypi.org/project/Unidecode/) | `>=1.3.8`  |         `GNU GPLv2`          | Required.               |
 |    [Pyphen](https://github.com/Kozea/Pyphen)     | `>=0.17.0` | `GPL 2.0+/LGPL 2.1+/MPL 1.1` | Required.               |
 
@@ -49,11 +45,8 @@ SmoothText can calculate readability scores of text in the following languages, 
 
 Notes:
 
-- **Ateşman** is the Turkish adaptation of **Flesch Reading Ease**. The two can be used interchangeably in the module.
-- **Bezirci-Yılmaz** is the Turkish adaptation of **Flesch-Kincaid Grade**. The two can be used interchangeably in the
-  module.
-- **Flesch-Kincaid Grade Simplified** is essentially the same formula with as **Flesch-Kincaid Grade**, except that its
-  constants are different.
+- **Ateşman** is the Turkish adaptation of **Flesch Reading Ease**.
+- **Bezirci-Yılmaz** is the Turkish adaptation of **Flesch-Kincaid Grade**.
 
 ### Sentencizing, Tokenizing, and Syllabifying
 
@@ -68,65 +61,87 @@ SmoothText can calculate how long would a text take to read.
 You can install SmoothText via `pip`.
 
 ```Python
-pip
-install
-smoothtext
+pip install smoothtext
 ```
 
 ## Usage
 
 ### Importing and Initializing the Library
 
-SmoothText comes with three submodules: `Language`, `ReadabilityFormula` and SmoothText.
+SmoothText comes with four submodules: `Backend`, `Language`, `ReadabilityFormula` and `SmoothText`.
 
 ```Python
-from smoothtext import Language, ReadabilityFormula, SmoothText
+from smoothtext import Backend, Language, ReadabilityFormula, SmoothText
 ```
 
-Before using, the library must be initialized with a static function. The following will set
-[NLTK](https://www.nltk.org/) as the backend, and automatically download all the resources for the supported languages.
-Alternatively, you can use [Stanza](https://stanfordnlp.github.io/stanza/).
+#### Instancing
+
+SmoothText was not designed to be used with static methods. Thus, an instance must be created to access its methods.
+
+When creating an instance, the language and the backend to be used with it can be specified.
+
+The following will create a new SmoothText instance configured to be used with the English language (by default, the United Kingdom variant) using NLTK as the backend.
 
 ```Python
-SmoothText.setup(backend='nltk')
+st = SmoothText('en', 'nltk')
 ```
 
-### Instancing
-
-SmoothText is expected to be used with SmoothText class instances.
+Once an instance is created, its backend cannot be changed, but its working language can be changed at any time.
 
 ```Python
-st = SmoothText('en')
+st.language = 'tr' # Now configured to work with Turkish.
+st.language = 'en-us' # Switching back to English, but to the United States variant.
 ```
 
-Now, an instance is accessible via `st`, and it is ready to work with English texts.
+#### Readying the Backends
 
-### Calculating Readability Scores
-
-See the following [text](https://en.wikipedia.org/wiki/Forrest_Gump). Now, we will analyze it.
+When an instance is created, the instance will first attempt to import and download the required backend/language data. To avoid this, and to prepare the required packages in advance, we can use the static `SmoothText.prepare()` method.
 
 ```Python
-text = "Forrest Gump is a 1994 American comedy-drama film directed by Robert Zemeckis."
+SmoothText.prepare('nltk', 'en,tr') # Preparing NLTK to be used with English and Turkish
 ```
 
-For English, we have two available formulas: `Flesch Reading Ease` and `Flesch-Kincaid Grade`. We can either call the
-`compute_readability` function, or use the instance as a callable. Either way, we are expected to pass the formula.
+### Computing Readability Scores
 
-```python
-score_1 = st.compute_readability(text, ReadabilityFormula.Flesch_Reading_Ease)
-score_2 = st(text, ReadabilityFormula.Flesch_Kincaid_Grade)
+Each language has its own set of readability formulas. When computing the readability score of a text in a language, one of the supporting formulas must be used. Using SmoothText, there are three ways to perform this calculation.
 
-print(score_1, score_2)
-# Output is: 25.455000000000013 12.690000000000001
+```Python
+text: str = 'Forrest Gump is a 1994 American comedy-drama film directed by Robert Zemeckis.' # https://en.wikipedia.org/wiki/Forrest_Gump
+
+# Generic computation method
+st.compute_readability(text, ReadabilityFormula.Flesch_Reading_Ease)
+
+# Using instance as a callable for generic computation
+st(text, ReadabilityFormula.Flesch_Reading_Ease)
+
+# Specific formula method
+st.flesch_reading_ease(text)
 ```
+
+### Tokenizing and Calculating Text Statistics
+
+SmoothText is designed to work with sentences, words/tokens, and syllables.
+
+```Python
+text = 'This is a test sentence. This is another test sentence. This is a third test sentence.'
+
+st.count_sentences(text)
+# Output: 3
+
+st.count_words(text)
+# Output: 14
+
+st.count_syllables(text)
+# Output: 21
+```
+
+### Other Features
+
+Refer to the documentation for a complete list of available methods.
 
 ## Documentation
 
 See [here](https://smoothtext.github.io/) for API documentation.
-
-## Roadmap
-
-SmoothText is still in its early stages. The immediate tasks include adding more languages and backends.
 
 ## License
 

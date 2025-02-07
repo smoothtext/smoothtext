@@ -2,7 +2,7 @@
 
 ---
 
-![Tests](https://github.com/smoothtext/smoothtext/actions/workflows/main.yml/badge.svg)
+[![Tests](https://github.com/smoothtext/smoothtext/actions/workflows/main.yml/badge.svg)](https://github.com/smoothtext/smoothtext/actions)
 [![license](https://img.shields.io/github/license/smoothtext/smoothtext.svg)](https://github.com/smoothtext/smoothtext/blob/main/LICENSE)
 [![versions](https://img.shields.io/pypi/pyversions/smoothtext.svg)](https://github.com/smoothtext/smoothtext)
 [![pypi](https://img.shields.io/pypi/v/smoothtext.svg)](https://pypi.org/project/smoothtext/)

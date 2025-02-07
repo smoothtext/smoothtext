@@ -53,38 +53,38 @@ class TestTokenization:
         assert st.sentencize(text) == expected
 
     def test_count_sentences(self, st, language):
-        if language == Language.English:
+        if language.family() == Language.English:
             text = "One. Two. Three!"
-        else:
+        elif language.family() == Language.Turkish:
             text = "Bir. İki. Üç!"
 
         assert st.count_sentences(text) == 3
 
     # Word level tests
     def test_tokenize(self, st, language):
-        if language == Language.English:
+        if language.family() == Language.English:
             text = "Hello world!"
             expected = ["Hello", "world", "!"]
-        else:
+        elif language.family() == Language.Turkish:
             text = "Merhaba dünya!"
             expected = ["Merhaba", "dünya", "!"]
 
         assert st.tokenize(text, split_sentences=False) == expected
 
     def test_tokenize_with_sentences(self, st, language):
-        if language == Language.English:
+        if language.family() == Language.English:
             text = "Hello world! Goodbye now."
             expected = [["Hello", "world", "!"], ["Goodbye", "now", "."]]
-        else:
+        elif language.family() == Language.Turkish:
             text = "Merhaba dünya! Hoşça kal."
             expected = [["Merhaba", "dünya", "!"], ["Hoşça", "kal", "."]]
 
         assert st.tokenize(text, split_sentences=True) == expected
 
     def test_count_words(self, st, language):
-        if language == Language.English:
+        if language.family() == Language.English:
             text = "Hello world! This is a test."
-        else:
+        elif language.family() == Language.Turkish:
             text = "Merhaba dünya! Bu bir test metnidir."
 
         assert st.count_words(text) == 6

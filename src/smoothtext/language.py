@@ -90,6 +90,27 @@ class Language(Enum):
 
         return self
 
+    def variants(self) -> list[Language]:
+        """
+        Get a list of all language variants for the current language.
+
+        Returns:
+            list[Language]: List of all language variants, including the current language
+
+        Examples:
+            >>> Language.English_GB.variants()
+            [Language.English_GB, Language.English_US]
+            >>> Language.English.variants()
+            [Language.English_GB, Language.English_US]
+        """
+        if self.family() == Language.English:
+            return [Language.English_GB, Language.English_US]
+
+        if self.family() == Language.Turkish:
+            return [Language.Turkish_TR]
+
+        return [self]
+
     # # # # # # # # # #
     # Stringification #
     # # # # # # # # # #

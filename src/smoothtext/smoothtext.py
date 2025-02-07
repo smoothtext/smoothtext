@@ -82,7 +82,7 @@ def _prepare(
         else:
             import nltk
 
-            for package in ("punkt", "cmudict"):
+            for package in ("cmudict", "punkt", "punkt_tab"):
                 if not nltk.download(package, **backend_kwargs):
                     logging.error("Failed to download NLTK data. Exiting...")
                     return

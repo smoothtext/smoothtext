@@ -39,11 +39,15 @@ class Language(Enum):
     Attributes:
         # Base Languages
         English: Generic English language support
+        German: Generic German language support
         Turkish: Generic Turkish language support
 
         # English Variants
-        English_GB: British English variant (default for 'en')
-        English_US: American English variant
+        English_GB: British English variant
+        English_US: American English variant (default for 'en')
+
+        # German Variants
+        German_DE: German (Germany) variant (default for 'de')
 
         # Turkish Variants
         Turkish_TR: Turkish (Türkiye) variant (default for 'tr')
@@ -59,11 +63,15 @@ class Language(Enum):
     # # # # # # # #
     # Base Languages
     English = "English"
+    German = "German"
     Turkish = "Turkish"
 
     # English Variants
     English_GB = "English (Great Britain)"
     English_US = "English (United States)"
+
+    # German Variants
+    German_DE = "German (Germany)"
 
     # Turkish Variants
     Turkish_TR = "Turkish (Türkiye)"
@@ -85,6 +93,9 @@ class Language(Enum):
         if self in [Language.English_GB, Language.English_US]:
             return Language.English
 
+        if self in [Language.German_DE]:
+            return Language.German
+
         if self in [Language.Turkish_TR]:
             return Language.Turkish
 
@@ -105,6 +116,9 @@ class Language(Enum):
         """
         if self.family() == Language.English:
             return [Language.English_GB, Language.English_US]
+
+        if self.family() == Language.German:
+            return [Language.German_DE]
 
         if self.family() == Language.Turkish:
             return [Language.Turkish_TR]
@@ -193,6 +207,8 @@ class Language(Enum):
             Language.English,
             Language.English_GB,
             Language.English_US,
+            Language.German,
+            Language.German_DE,
             Language.Turkish,
             Language.Turkish_TR,
         ]
@@ -233,11 +249,8 @@ class Language(Enum):
         for k, v in _Constants.items():
             for e in v:
                 if e == language:
-                    if Language.English == k:
-                        return Language.English_GB
-
-                    if Language.Turkish == k:
-                        return Language.Turkish_TR
+                    if k == k.family():
+                        return k.variants()[-1]
 
                     return k
 
@@ -281,5 +294,9 @@ class Language(Enum):
 _Constants[Language.English] = (Language.English.value.lower(), "en", "eng")
 _Constants[Language.English_GB] = (Language.English_GB.value.lower(), "en-gb", "eng-gb")
 _Constants[Language.English_US] = (Language.English_US.value.lower(), "en-us", "eng-us")
+
+_Constants[Language.German] = (Language.German.value.lower(), "de", "deu")
+_Constants[Language.German_DE] = (Language.German_DE.value.lower(), "de-de", "deu-de")
+
 _Constants[Language.Turkish] = (Language.Turkish.value.lower(), "tr", "tur")
 _Constants[Language.Turkish_TR] = (Language.Turkish_TR.value.lower(), "tr-tr", "tur-tr")

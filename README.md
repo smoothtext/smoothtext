@@ -12,7 +12,8 @@
 
 ## Introduction
 
-SmoothText is a Python library for calculating readability scores of texts and statistical information for texts in multiple languages.
+SmoothText is a Python library for calculating readability scores of texts and statistical information for texts in
+multiple languages.
 
 The design principle of this library is to ensure high accuracy.
 
@@ -22,13 +23,13 @@ Python 3.10 or higher.
 
 ### External Dependencies
 
-|                     Library                      |  Version   |           License            | Notes                   |
-|:------------------------------------------------:|:----------:|:----------------------------:|-------------------------|
-|          [NLTK](https://www.nltk.org/)           | `>=3.9.1`  |         `Apache 2.0`         | Conditionally optional. |
-| [Stanza](https://stanfordnlp.github.io/stanza/)  | `>=1.10.1` |         `Apache 2.0`         | Conditionally optional. |
-| [CMUdict](https://pypi.org/project/cmudict/)  | `>=1.0.32` |         `GPLv3+`         | Required if `Stanza` is the selected backend. |
-| [Unidecode](https://pypi.org/project/Unidecode/) | `>=1.3.8`  |         `GNU GPLv2`          | Required.               |
-|    [Pyphen](https://github.com/Kozea/Pyphen)     | `>=0.17.0` | `GPL 2.0+/LGPL 2.1+/MPL 1.1` | Required.               |
+|                     Library                      |  Version   |           License            | Notes                                         |
+|:------------------------------------------------:|:----------:|:----------------------------:|-----------------------------------------------|
+|          [NLTK](https://www.nltk.org/)           | `>=3.9.1`  |         `Apache 2.0`         | Conditionally optional.                       |
+| [Stanza](https://stanfordnlp.github.io/stanza/)  | `>=1.10.1` |         `Apache 2.0`         | Conditionally optional.                       |
+|   [CMUdict](https://pypi.org/project/cmudict/)   | `>=1.0.32` |           `GPLv3+`           | Required if `Stanza` is the selected backend. |
+| [Unidecode](https://pypi.org/project/Unidecode/) | `>=1.3.8`  |         `GNU GPLv2`          | Required.                                     |
+|    [Pyphen](https://github.com/Kozea/Pyphen)     | `>=0.17.0` | `GPL 2.0+/LGPL 2.1+/MPL 1.1` | Required.                                     |
 
 Either NLTK or Stanza must be installed and used with the SmoothText library.
 
@@ -38,13 +39,21 @@ Either NLTK or Stanza must be installed and used with the SmoothText library.
 
 SmoothText can calculate readability scores of text in the following languages, using the following formulas.
 
-| Formula/Language                                                                                                                                                                                                                             | English |                                                                                                                                Turkish                                                                                                                                |
-|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-| [Flesch Reading Ease](https://scholar.google.com/scholar?as_sdt=0%2C5&q=A+New+Readability+Yardstick+R+Flesch&btnG=)                                                                                                                          |    ✔    |                                                          ✔ [Ateşman](https://scholar.google.com/scholar?as_sdt=0%2C5&q=T%C3%BCrk%C3%A7ede+Okunabilirli%C4%9Fin+%C3%96l%C3%A7%C3%BClmesi+Ate%C5%9Fman&btnG=)                                                           |
-| [Flesch-Kincaid Grade](https://scholar.google.com/scholar?as_sdt=0%2C5&q=Derivation+of+new+readability+formulas+%28automated+readability+index%2C+fog+count+and+flesch+reading+ease+formula%29+for+navy+enlisted+personnel&btnG=)            |    ✔    | ✔ [Bezirci-Yılmaz](https://scholar.google.com/scholar?as_sdt=0%2C5&q=Metinlerin+okunabilirli%C4%9Finin+%C3%B6l%C3%A7%C3%BClmesi+%C3%BCzerine+bir+yazilim+k%C3%BCt%C3%BCphanesi+ve+T%C3%BCrk%C3%A7e+i%C3%A7in+yeni+bir+okunabilirlik+%C3%B6l%C3%A7%C3%BCt%C3%BC&btnG=) |
-| [Flesch-Kincaid Grade Simplified](https://scholar.google.com/scholar?as_sdt=0%2C5&q=Derivation+of+new+readability+formulas+%28automated+readability+index%2C+fog+count+and+flesch+reading+ease+formula%29+for+navy+enlisted+personnel&btnG=) |    ✔    |                                                                                                                                   ❌                                                                                                                                   |
+| Formula/Language                                                                                                                                                                                                                             | English |         German          |                                                                                                                                Turkish                                                                                                                                |
+|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------:|:-----------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| [Flesch Reading Ease](https://scholar.google.com/scholar?as_sdt=0%2C5&q=A+New+Readability+Yardstick+R+Flesch&btnG=)                                                                                                                          |    ✔    |            ✔            |                                                          ✔ [Ateşman](https://scholar.google.com/scholar?as_sdt=0%2C5&q=T%C3%BCrk%C3%A7ede+Okunabilirli%C4%9Fin+%C3%96l%C3%A7%C3%BClmesi+Ate%C5%9Fman&btnG=)                                                           |
+| [Flesch-Kincaid Grade](https://scholar.google.com/scholar?as_sdt=0%2C5&q=Derivation+of+new+readability+formulas+%28automated+readability+index%2C+fog+count+and+flesch+reading+ease+formula%29+for+navy+enlisted+personnel&btnG=)            |    ✔    | ✔ Wiener Sachtextformel | ✔ [Bezirci-Yılmaz](https://scholar.google.com/scholar?as_sdt=0%2C5&q=Metinlerin+okunabilirli%C4%9Finin+%C3%B6l%C3%A7%C3%BClmesi+%C3%BCzerine+bir+yazilim+k%C3%BCt%C3%BCphanesi+ve+T%C3%BCrk%C3%A7e+i%C3%A7in+yeni+bir+okunabilirlik+%C3%B6l%C3%A7%C3%BCt%C3%BC&btnG=) |
+| [Flesch-Kincaid Grade Simplified](https://scholar.google.com/scholar?as_sdt=0%2C5&q=Derivation+of+new+readability+formulas+%28automated+readability+index%2C+fog+count+and+flesch+reading+ease+formula%29+for+navy+enlisted+personnel&btnG=) |    ✔    |            ❌            |                                                                                                                                   ❌                                                                                                                                   |
 
-Notes:
+**Notes:**
+
+German:
+
+- **Flesch Reading Ease** is applicable to German texts. SmoothText handles the language-specific adaptations of the
+  formula.
+- **Wiener Sachtextformel** is the German adaptation of **Flesch-Kincaid Grade**.
+
+Turkish:
 
 - **Ateşman** is the Turkish adaptation of **Flesch Reading Ease**.
 - **Bezirci-Yılmaz** is the Turkish adaptation of **Flesch-Kincaid Grade**.
@@ -81,7 +90,8 @@ SmoothText was not designed to be used with static methods. Thus, an instance mu
 
 When creating an instance, the language and the backend to be used with it can be specified.
 
-The following will create a new SmoothText instance configured to be used with the English language (by default, the United Kingdom variant) using NLTK as the backend.
+The following will create a new SmoothText instance configured to be used with the English language (by default, the
+United States variant) using NLTK as the backend.
 
 ```Python
 st = SmoothText('en', 'nltk')
@@ -90,24 +100,26 @@ st = SmoothText('en', 'nltk')
 Once an instance is created, its backend cannot be changed, but its working language can be changed at any time.
 
 ```Python
-st.language = 'tr' # Now configured to work with Turkish.
-st.language = 'en-us' # Switching back to English, but to the United States variant.
+st.language = 'tr'  # Now configured to work with Turkish.
+st.language = 'en-gb'  # Switching back to English, but to the United Kingdom variant.
 ```
 
 #### Readying the Backends
 
-When an instance is created, the instance will first attempt to import and download the required backend/language data. To avoid this, and to prepare the required packages in advance, we can use the static `SmoothText.prepare()` method.
+When an instance is created, the instance will first attempt to import and download the required backend/language data.
+To avoid this, and to prepare the required packages in advance, we can use the static `SmoothText.prepare()` method.
 
 ```Python
-SmoothText.prepare('nltk', 'en,tr') # Preparing NLTK to be used with English and Turkish
+SmoothText.prepare('nltk', 'en,tr')  # Preparing NLTK to be used with English and Turkish
 ```
 
 ### Computing Readability Scores
 
-Each language has its own set of readability formulas. When computing the readability score of a text in a language, one of the supporting formulas must be used. Using SmoothText, there are three ways to perform this calculation.
+Each language has its own set of readability formulas. When computing the readability score of a text in a language, one
+of the supporting formulas must be used. Using SmoothText, there are three ways to perform this calculation.
 
 ```Python
-text: str = 'Forrest Gump is a 1994 American comedy-drama film directed by Robert Zemeckis.' # https://en.wikipedia.org/wiki/Forrest_Gump
+text: str = 'Forrest Gump is a 1994 American comedy-drama film directed by Robert Zemeckis.'  # https://en.wikipedia.org/wiki/Forrest_Gump
 
 # Generic computation method
 st.compute_readability(text, ReadabilityFormula.Flesch_Reading_Ease)
@@ -139,6 +151,16 @@ st.count_syllables(text)
 ### Other Features
 
 Refer to the documentation for a complete list of available methods.
+
+## Inconsistencies
+
+### Backend Related Inconsistencies
+
+- NLTK and Stanza have different tokenization rules. This may cause differences in the number of tokens/sentences between the two backends.
+
+### Language Related Inconsistencies
+
+- The syllabification of words may differ within the same language variant. For example, the word "hello" has two syllables in American English but one in British English.
 
 ## Documentation
 

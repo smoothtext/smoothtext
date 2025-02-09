@@ -20,13 +20,23 @@ class TestTokenization:
         except ImportError:
             pass
 
+        if not backends:
+            pytest.skip("No supported backends available")
         return backends
+
+    @pytest.fixture(params=["nltk", "stanza"])
+    def backend(self, request, available_backends):
+        backend = Backend.parse(request.param)
+        if backend not in available_backends:
+            pytest.skip(f"{backend} backend not available")
+        return backend
 
     @pytest.fixture(
         params=[
             Language.English,
             Language.English_GB,
             Language.English_US,
+            Language.German,
             Language.Turkish,
             Language.Turkish_TR,
         ]
@@ -35,17 +45,18 @@ class TestTokenization:
         return request.param
 
     @pytest.fixture
-    def st(self, available_backends, language):
-        if not available_backends:
-            pytest.skip("No supported backends available")
-        SmoothText.prepare(backend=available_backends[0], languages=[language])
-        return SmoothText(language=language, backend=available_backends[0])
+    def st(self, backend, language):
+        SmoothText.prepare(backend=backend, languages=[language])
+        return SmoothText(language=language, backend=backend)
 
     # Sentence level tests
     def test_sentencize(self, st, language):
         if language.family() == Language.English:
             text = "This is a test. This is another test!"
             expected = ["This is a test.", "This is another test!"]
+        elif language.family() == Language.German:
+            text = "Dies ist ein Test. Dies ist noch ein Test!"
+            expected = ["Dies ist ein Test.", "Dies ist noch ein Test!"]
         elif language.family() == Language.Turkish:
             text = "Bu bir test. Bu başka bir test!"
             expected = ["Bu bir test.", "Bu başka bir test!"]
@@ -54,9 +65,11 @@ class TestTokenization:
 
     def test_count_sentences(self, st, language):
         if language.family() == Language.English:
-            text = "One. Two. Three!"
+            text = "I am going home. The sky is blue. Today is a beautiful day!"
+        elif language.family() == Language.German:
+            text = " gehe nach Hause. Der Himmel ist blau. Heute ist ein schöner Tag!"
         elif language.family() == Language.Turkish:
-            text = "Bir. İki. Üç!"
+            text = "Ben eve gidiyorum. Gökyüzü mavi. Bugün güzel bir gün!"
 
         assert st.count_sentences(text) == 3
 
@@ -65,6 +78,9 @@ class TestTokenization:
         if language.family() == Language.English:
             text = "Hello world!"
             expected = ["Hello", "world", "!"]
+        elif language.family() == Language.German:
+            text = "Hallo Welt!"
+            expected = ["Hallo", "Welt", "!"]
         elif language.family() == Language.Turkish:
             text = "Merhaba dünya!"
             expected = ["Merhaba", "dünya", "!"]
@@ -75,6 +91,9 @@ class TestTokenization:
         if language.family() == Language.English:
             text = "Hello world! Goodbye now."
             expected = [["Hello", "world", "!"], ["Goodbye", "now", "."]]
+        elif language.family() == Language.German:
+            text = "Hallo Welt! Auf Wiedersehen."
+            expected = [["Hallo", "Welt", "!"], ["Auf", "Wiedersehen", "."]]
         elif language.family() == Language.Turkish:
             text = "Merhaba dünya! Hoşça kal."
             expected = [["Merhaba", "dünya", "!"], ["Hoşça", "kal", "."]]
@@ -84,6 +103,8 @@ class TestTokenization:
     def test_count_words(self, st, language):
         if language.family() == Language.English:
             text = "Hello world! This is a test."
+        elif language.family() == Language.German:
+            text = "Hallo Welt! Dies ist ein Test."
         elif language.family() == Language.Turkish:
             text = "Merhaba dünya! Bu bir test metnidir."
 
@@ -96,6 +117,8 @@ class TestTokenization:
                 assert st.syllabify("hello") == ["hello"]
             elif language == Language.English_US:
                 assert st.syllabify("hello") == ["hel", "lo"]
+        elif language.family() == Language.German:
+            assert st.syllabify("hallo") == ["hal", "lo"]
         elif language.family() == Language.Turkish:
             assert st.syllabify("merhaba") == ["mer", "ha", "ba"]
 
@@ -124,6 +147,9 @@ class TestTokenization:
         if language.family() == Language.English:
             text = "I love 🐈"
             expected = "I love (cat)"
+        elif language.family() == Language.German:
+            text = "Ich liebe 🐈"
+            expected = "Ich liebe (katze)"
         elif language.family() == Language.Turkish:
             text = "Ben 🐈 severim"
             expected = "Ben (kedi) severim"
@@ -143,6 +169,15 @@ class TestTokenization:
         assert st_eng.language.family() == Language.English
         assert st_gb.language.family() == Language.English
         assert st_us.language.family() == Language.English
+
+        # Test German variants
+        st_de = SmoothText(language=Language.German, backend=available_backends[0])
+        st_de_de = SmoothText(
+            language=Language.German_DE, backend=available_backends[0]
+        )
+
+        assert st_de.language.family() == Language.German
+        assert st_de_de.language.family() == Language.German
 
         # Test Turkish variants
         st_tr = SmoothText(language=Language.Turkish, backend=available_backends[0])
@@ -179,6 +214,7 @@ class TestReadability:
             Language.English,
             Language.English_GB,
             Language.English_US,
+            Language.German,
             Language.Turkish,
             Language.Turkish_TR,
         ]
@@ -282,6 +318,16 @@ class TestReadability:
             formula = ReadabilityFormula.Atesman
             score = st.compute_readability(text, formula)
             assert score == 0
+        elif language.family() == Language.German:
+            text = "Dies ist ein einfacher Testsatz."
+            formula = ReadabilityFormula.Flesch_Reading_Ease
+            score = st.compute_readability(text, formula)
+            assert score > 0
+
+            # Test invalid formula for language
+            formula = ReadabilityFormula.Atesman
+            score = st.compute_readability(text, formula)
+            assert score == 0
         elif language.family() == Language.Turkish:
             text = "Bu basit bir test cümlesidir."
             formula = ReadabilityFormula.Atesman
@@ -292,3 +338,35 @@ class TestReadability:
             formula = ReadabilityFormula.Flesch_Kincaid_Grade
             score = st.compute_readability(text, formula)
             assert score == 0
+
+    # Add German Flesch test
+    def test_german_flesch_reading_ease(self, st, language):
+        if language.family() == Language.German:
+            # Simple text
+            text = "Der Hund läuft schnell."
+            score = st.flesch_reading_ease(text)
+            assert 117 <= score <= 118
+
+            # Complex text
+            text = "Die quantenmechanischen Phänomene zeigen ein intrinsisch probabilistisches Verhalten."
+            score = st.flesch_reading_ease(text)
+            assert -26 <= score <= -25
+        else:
+            pytest.skip("German Flesch is only for German texts")
+
+    def test_wiener_sachtextformel(self, st, language):
+        if language.family() == Language.German:
+            text = "Ein mittelkomplexer deutscher Beispieltext zur Analyse."
+
+            score1 = st.wiener_sachtextformel_1(text)
+            score2 = st.wiener_sachtextformel_2(text)
+            score3 = st.wiener_sachtextformel_3(text)
+            score4 = st.wiener_sachtextformel_4(text)
+
+            scores = {score1, score2, score3, score4}
+            assert len(scores) == 4
+
+            for score in scores:
+                assert -2 <= score <= 2
+        else:
+            pytest.skip("Wiener Sachtextformel is only for German texts")

@@ -11,9 +11,9 @@ from .language import Language
 from .readability import ReadabilityFormula
 from .smoothtext import SmoothText
 
-__version__ = (0, 1, 1)
+__version__ = (0, 2, 0)
 
-for module in (Backend, Language, SmoothText):
+for module in (Backend, Language, ReadabilityFormula, SmoothText):
     for attr in dir(module):
         if callable(getattr(module, attr)):
             if not attr.startswith("_"):

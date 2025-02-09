@@ -59,29 +59,6 @@ class SyllabifierEng(SyllabifierBase):
         else:
             self.__pyphen = pyphen.Pyphen(lang="en")
 
-    def __syllabify_cmu(self, token: str) -> list[str]:
-        token = token.lower()
-
-        phonemes = self.__cmudict[token][0]
-        syllables = []
-        current = []
-
-        for p in phonemes:
-            p_clean = re.sub(r"\d+", "", p)
-            current.append(p_clean)
-
-            if re.search(r"[AEIOUYaeiouy]", p_clean):
-                syllables.append("".join(current))
-                current = []
-
-        if current:
-            syllables.append("".join(current))
-
-        if "".join(syllables).lower() != token:
-            return []
-
-        return syllables
-
     def syllabify(self, token: str) -> list[str]:
         # Get the syllables of the token using Pyphen.
         p_syllables = self.__pyphen.inserted(token)
@@ -115,6 +92,30 @@ class SyllabifierEng(SyllabifierBase):
             return p_syllables
 
         return syllables
+
+    def count(self, token: str) -> int:
+        # If the token is empty, return 0.
+        if not token:
+            return 0
+
+        has_alnum: bool = False
+        for c in token:
+            if c.isalnum():
+                has_alnum = True
+                break
+
+        if not has_alnum:
+            return 0
+
+        return len(self.syllabify(token))
+
+
+class SyllabifierGer(SyllabifierBase):
+    def __init__(self):
+        self.__pyphen = pyphen.Pyphen(lang="de_DE")
+
+    def syllabify(self, token: str) -> list[str]:
+        return self.__pyphen.inserted(token).split("-")
 
     def count(self, token: str) -> int:
         # If the token is empty, return 0.

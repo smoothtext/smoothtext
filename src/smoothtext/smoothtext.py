@@ -25,6 +25,7 @@ from . import Language
 from . import ReadabilityFormula
 from .internal.syllabifier import (
     SyllabifierEng,
+    SyllabifierGer,
     SyllabifierTur,
     _is_consonant,
     _is_vowel,
@@ -112,6 +113,7 @@ class SmoothText:
 
     Supported languages:
     - English
+    - German
     - Turkish
 
     Examples:
@@ -123,6 +125,7 @@ class SmoothText:
     # Constants for Flesh Reading East & Ateşman.
     __constants: dict[Language, tuple[float, float, float]] = {
         Language.English: (206.835, 1.015, 84.6),
+        Language.German: (180.0, 1.0, 58.5),
         Language.Turkish: (198.825, 2.61, 40.175),
     }
 
@@ -276,10 +279,17 @@ class SmoothText:
     def __configure_language(self, language: Language) -> None:
         # English
         if Language.English == language:
-            language = Language.English_GB
+            language = Language.English_US
 
         if Language.English == language.family():
             self.__syllabifier = SyllabifierEng(self.__backend, language)
+
+        # German
+        if Language.German == language:
+            language = Language.German_DE
+
+        if Language.German == language.family():
+            self.__syllabifier = SyllabifierGer()
 
         # Turkish
         if Language.Turkish == language:
@@ -492,6 +502,25 @@ class SmoothText:
 
         return self.__syllabifier.count(word.lower().strip())
 
+    def syllable_frequencies(self, text: str) -> dict[int, int]:
+        frequencies: dict[int, int] = {}
+
+        tokens: list[str] = self.tokenize(text=text, split_sentences=False)
+
+        for token in tokens:
+            token = token.lower().strip()
+            syllables: int = self.__syllabifier.count(token)
+
+            if 0 == syllables:
+                continue
+
+            if syllables not in frequencies:
+                frequencies[syllables] = 0
+
+            frequencies[syllables] += 1
+
+        return frequencies
+
     # Character level.
     @staticmethod
     def count_consonants(text: str) -> int:
@@ -669,6 +698,56 @@ class SmoothText:
             syllable_frequencies,
         )
 
+    def __compute_3(self, text: str) -> tuple[float, float, float, float]:
+        # This method returns:
+        #   - average sentence length
+        #   - percentage of words with at least six characters
+        #   - words with single syllables
+        #   - percentage of words with at least three syllables
+
+        total_words: int = 0
+        num_sentences: int = 0
+
+        num_long_words: int = 0
+        num_mono_syllable_words: int = 0
+        num_multi_syllable_words: int = 0
+
+        # Tokenize the text into words and sentences.
+        sentences: list[list[str]] = self.tokenize(text=text, split_sentences=True)
+
+        # Perform calculations.
+        for sentence in sentences:
+            words: list[str] = SmoothText.__filter_words(sentence)
+
+            if 0 == len(words):
+                continue
+
+            num_sentences += 1
+            total_words += len(words)
+
+            for word in words:
+                word = word.lower().strip()
+                if 6 <= len(word):
+                    num_long_words += 1
+
+                word_syllable_count = self.__syllabifier.count(word)
+                if 1 == word_syllable_count:
+                    num_mono_syllable_words += 1
+                elif 3 <= word_syllable_count:
+                    num_multi_syllable_words += 1
+
+        # Check if no valid sentences were found. This avoids division by zero.
+        if 0 == num_sentences:
+            return 0.0, 0.0, 0.0, 0.0
+
+        # Return the result.
+        return (
+            float(total_words) / float(num_sentences),
+            float(num_long_words) / float(total_words),
+            float(num_mono_syllable_words) / float(total_words),
+            float(num_multi_syllable_words) / float(total_words),
+        )
+
     # Flesch Reading Ease & Ateşman.
     def __flesch_reading_ease(self, text: str) -> float:
         avg_word_syllables, avg_sentence_length = self.__compute_1(text)
@@ -779,6 +858,146 @@ class SmoothText:
 
         return self.__flesch_kincaid_grade_simplified(text=text)
 
+    # Wiener Sachtextformel
+    def __wiener_sachtextformel(self, text: str, version: int) -> float:
+        avg_sentence_length, pct_long_words, pct_mono_syllable, pct_multi_syllable = (
+            self.__compute_3(text)
+        )
+
+        if 1 == version:
+            return (
+                0.1935 * pct_multi_syllable
+                + 0.1672 * avg_sentence_length
+                + 0.1297 * pct_long_words
+                - 0.0327 * pct_mono_syllable
+                - 0.875
+            )
+
+        if 2 == version:
+            return (
+                0.2007 * pct_multi_syllable
+                + 0.1682 * avg_sentence_length
+                + 0.1373 * pct_long_words
+                - 2.779
+            )
+
+        if 3 == version:
+            return 0.2963 * pct_multi_syllable + 0.1905 * avg_sentence_length - 1.1144
+
+        if 4 == version:
+            return 0.2744 * pct_multi_syllable + 0.2656 * avg_sentence_length - 1.693
+
+        return 0.0
+
+    def wiener_sachtextformel(
+        self, text: str, demojize: bool = False, version: int = 3
+    ) -> float:
+        """
+        Calculate Wiener Sachtextformel readability score for German text.
+        The score takes into account sentence length and frequency of words with different lengths.
+        Higher scores indicate more difficult text.
+
+        Score ranges:
+        4-5: Very easy
+        6-8: Easy
+        9-11: Average
+        12-14: Difficult
+        15+: Very difficult
+
+        Args:
+            text: Input German text to analyze
+            demojize: If True, convert emojis to text before scoring
+            version: Wiener Sachtextformel version to use (1-4)
+
+        Returns:
+            float: Wiener Sachtextformel readability score (higher = more difficult)
+
+        Examples:
+            >>> score = st.wiener_sachtextformel("Deutscher Textbeispiel.")
+            >>> score = st.wiener_sachtextformel("Deutscher Textbeispiel.", version=3)
+        """
+        if not SmoothText.__test_formula_langauge(
+            ReadabilityFormula.Wiener_Sachtextformel, self.__language
+        ):
+            return 0.0
+
+        if demojize:
+            text = self.demojize(text)
+
+        return self.__wiener_sachtextformel(text=text, version=version)
+
+    def wiener_sachtextformel_1(self, text: str, demojize: bool = False) -> float:
+        """
+        Calculate Wiener Sachtextformel readability score for German text.
+        The score takes into account sentence length and frequency of words with different lengths.
+        Higher scores indicate more difficult text.
+
+        Args:
+            text: Input German text to analyze
+            demojize: If True, convert emojis to text before scoring
+
+        Returns:
+            float: Wiener Sachtextformel readability score (higher = more difficult)
+
+        Examples:
+            >>> score = st.wiener_sachtextformel_1("Deutscher Textbeispiel.")
+        """
+        return self.wiener_sachtextformel(text=text, demojize=demojize, version=1)
+
+    def wiener_sachtextformel_2(self, text: str, demojize: bool = False) -> float:
+        """
+        Calculate Wiener Sachtextformel readability score for German text.
+        The score takes into account sentence length and frequency of words with different lengths.
+        Higher scores indicate more difficult text.
+
+        Args:
+            text: Input German text to analyze
+            demojize: If True, convert emojis to text before scoring
+
+        Returns:
+            float: Wiener Sachtextformel readability score (higher = more difficult)
+
+        Examples:
+            >>> score = st.wiener_sachtextformel_2("Deutscher Textbeispiel.")
+        """
+        return self.wiener_sachtextformel(text=text, demojize=demojize, version=2)
+
+    def wiener_sachtextformel_3(self, text: str, demojize: bool = False) -> float:
+        """
+        Calculate Wiener Sachtextformel readability score for German text.
+        The score takes into account sentence length and frequency of words with different lengths.
+        Higher scores indicate more difficult text.
+
+        Args:
+            text: Input German text to analyze
+            demojize: If True, convert emojis to text before scoring
+
+        Returns:
+            float: Wiener Sachtextformel readability score (higher = more difficult)
+
+        Examples:
+            >>> score = st.wiener_sachtextformel_3("Deutscher Textbeispiel.")
+        """
+        return self.wiener_sachtextformel(text=text, demojize=demojize, version=3)
+
+    def wiener_sachtextformel_4(self, text: str, demojize: bool = False) -> float:
+        """
+        Calculate Wiener Sachtextformel readability score for German text.
+        The score takes into account sentence length and frequency of words with different lengths.
+        Higher scores indicate more difficult text.
+
+        Args:
+            text: Input German text to analyze
+            demojize: If True, convert emojis to text before scoring
+
+        Returns:
+            float: Wiener Sachtextformel readability score (higher = more difficult)
+
+        Examples:
+            >>> score = st.wiener_sachtextformel_4("Deutscher Textbeispiel.")
+        """
+        return self.wiener_sachtextformel(text=text, demojize=demojize, version=4)
+
     # Bezirci-Yılmaz
     def __bezirci_yilmaz(self, text: str) -> float:
         _, avg_sentence_length, num_sentences, syllable_frequencies = self.__compute_2(
@@ -833,12 +1052,6 @@ class SmoothText:
 
         Returns:
             float: Readability score (higher scores generally indicate easier readability)
-
-        Supported formulas:
-        - Flesch Reading Ease (English, Turkish)
-        - Ateşman (Turkish)
-        - Flesch-Kincaid Grade Level (English)
-        - Bezirci-Yılmaz (Turkish)
 
         Examples:
             >>> score = st.compute_readability(text, ReadabilityFormula.Flesch_Reading_Ease)

@@ -47,6 +47,10 @@ SmoothText can calculate readability scores of text in the following languages, 
 
 **Notes:**
 
+English:
+
+- Formulas work best with US English. However, SmoothText supports both US English and GB English.
+
 German:
 
 - **Flesch Reading Ease** is applicable to German texts. SmoothText handles the language-specific adaptations of the

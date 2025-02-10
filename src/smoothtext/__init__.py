@@ -11,7 +11,7 @@ from .language import Language
 from .readability import ReadabilityFormula
 from .smoothtext import SmoothText
 
-__version__ = (0, 2, 0)
+__version__ = (0, 2, 1)
 
 for module in (Backend, Language, ReadabilityFormula, SmoothText):
     for attr in dir(module):

@@ -11,6 +11,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
+    "Natural Language :: German",
     "Natural Language :: Turkish",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -19,7 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Text Processing",
 ]
-description = "A Python library for text readability analysis, supporting multiple languages including English and Turkish."
+description = "A Python library for text readability analysis, supporting multiple languages."
 name = "smoothtext"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -31,10 +32,11 @@ keywords = [
     "text-analysis",
     "syllables",
     "english",
+    "german",
     "turkish",
 ]
 license = { text = "MIT" }
-version = "0.2.0"
+version = "0.2.1"
 
 [[project.authors]]
 email = "contact@tugrulgungor.me"

@@ -63,7 +63,7 @@ class ReadabilityFormula(Enum):
     Bezirci_Yilmaz = "Bezirci-Yılmaz"
 
     # Formula-Language Supports.
-    def supports(self, language: Language) -> bool:
+    def supports(self, language: "Language") -> bool:
         """
         Determines if the formula supports the specified language.
 
@@ -73,30 +73,9 @@ class ReadabilityFormula(Enum):
         Returns:
             bool: True if the formula supports the specified language, False otherwise.
         """
+        from . import Language
+
         if not isinstance(language, Language):
             return False
 
-        if Language.English == language.family():
-            return self in [
-                ReadabilityFormula.Flesch_Reading_Ease,
-                ReadabilityFormula.Flesch_Kincaid_Grade,
-                ReadabilityFormula.Flesch_Kincaid_Grade_Simplified,
-            ]
-
-        if Language.German == language.family():
-            return self in [
-                ReadabilityFormula.Flesch_Reading_Ease,
-                ReadabilityFormula.Wiener_Sachtextformel,
-                ReadabilityFormula.Wiener_Sachtextformel_1,
-                ReadabilityFormula.Wiener_Sachtextformel_2,
-                ReadabilityFormula.Wiener_Sachtextformel_3,
-                ReadabilityFormula.Wiener_Sachtextformel_4,
-            ]
-
-        if Language.Turkish == language.family():
-            return self in [
-                ReadabilityFormula.Atesman,
-                ReadabilityFormula.Bezirci_Yilmaz,
-            ]
-
-        return False
+        return self in language.readability_formulas()

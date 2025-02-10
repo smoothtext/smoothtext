@@ -1,5 +1,6 @@
 import pytest
 from smoothtext.language import Language
+from smoothtext.readability import ReadabilityFormula
 
 
 def test_language_codes():
@@ -154,3 +155,31 @@ def test_language_string_representation():
     assert str(Language.English_US) == "English (United States)"
     assert str(Language.Turkish_TR) == "Turkish (Türkiye)"
     assert str(Language.German_DE) == "German (Germany)"
+
+
+def test_language_readability_formulas():
+    # Test English formulas
+    english_formulas = Language.English.readability_formulas()
+    assert ReadabilityFormula.Flesch_Reading_Ease in english_formulas
+    assert ReadabilityFormula.Flesch_Kincaid_Grade in english_formulas
+    assert ReadabilityFormula.Flesch_Kincaid_Grade_Simplified in english_formulas
+    
+    # Test German formulas
+    german_formulas = Language.German.readability_formulas()
+    assert ReadabilityFormula.Flesch_Reading_Ease in german_formulas
+    assert ReadabilityFormula.Wiener_Sachtextformel in german_formulas
+    assert ReadabilityFormula.Wiener_Sachtextformel_1 in german_formulas
+    assert ReadabilityFormula.Wiener_Sachtextformel_2 in german_formulas
+    assert ReadabilityFormula.Wiener_Sachtextformel_3 in german_formulas
+    assert ReadabilityFormula.Wiener_Sachtextformel_4 in german_formulas
+
+    # Test Turkish formulas
+    turkish_formulas = Language.Turkish.readability_formulas()
+    assert ReadabilityFormula.Atesman in turkish_formulas
+    assert ReadabilityFormula.Bezirci_Yilmaz in turkish_formulas
+
+    # Test that variants return same formulas as their family
+    assert Language.English_US.readability_formulas() == Language.English.readability_formulas()
+    assert Language.English_GB.readability_formulas() == Language.English.readability_formulas()
+    assert Language.German_DE.readability_formulas() == Language.German.readability_formulas()
+    assert Language.Turkish_TR.readability_formulas() == Language.Turkish.readability_formulas()

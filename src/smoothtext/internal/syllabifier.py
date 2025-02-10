@@ -7,7 +7,6 @@
 #  https://opensource.org/license/mit/
 
 from abc import abstractmethod
-import logging
 import re
 
 from ..backend import Backend

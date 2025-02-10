@@ -29,7 +29,8 @@ Python 3.10 or higher.
 | [Stanza](https://stanfordnlp.github.io/stanza/)  | `>=1.10.1` |         `Apache 2.0`         | Conditionally optional.                       |
 |   [CMUdict](https://pypi.org/project/cmudict/)   | `>=1.0.32` |           `GPLv3+`           | Required if `Stanza` is the selected backend. |
 | [Unidecode](https://pypi.org/project/Unidecode/) | `>=1.3.8`  |         `GNU GPLv2`          | Required.                                     |
-|    [Pyphen](https://github.com/Kozea/Pyphen)     | `>=0.17.0` | `GPL 2.0+/LGPL 2.1+/MPL 1.1` | Required.                                     |
+|    [Pyphen](https://pypi.org/project/pyphen/)    | `>=0.17.0` | `GPL 2.0+/LGPL 2.1+/MPL 1.1` | Required.                                     |
+|     [emoji](https://pypi.org/project/emoji/)     | `>=2.14.1` |            `BSD`             | Required.                                     |
 
 Either NLTK or Stanza must be installed and used with the SmoothText library.
 

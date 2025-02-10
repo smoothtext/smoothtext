@@ -146,6 +146,52 @@ class Language(Enum):
         """
         return _Constants[self][2][:3]
 
+    # # # # # # # # # # # # #
+    # Readability Formulas  #
+    # # # # # # # # # # # # #
+    def readability_formulas(self) -> list["ReadabilityFormula"]:
+        """
+        Get a list of supported readability formulas for the current language.
+
+        Different languages have different readability formulas that are specifically
+        designed and validated for their linguistic characteristics.
+
+        Returns:
+            list[ReadabilityFormula]: List of readability formulas supported for this language
+
+        Examples:
+            >>> Language.English.readability_formulas()
+            [ReadabilityFormula.Flesch_Reading_Ease,
+             ReadabilityFormula.Flesch_Kincaid_Grade,
+             ReadabilityFormula.Flesch_Kincaid_Grade_Simplified]
+            >>> Language.Turkish.readability_formulas()
+            [ReadabilityFormula.Atesman, ReadabilityFormula.Bezirci_Yilmaz]
+        """
+        from . import ReadabilityFormula
+
+        if Language.English == self.family():
+            return [
+                ReadabilityFormula.Flesch_Reading_Ease,
+                ReadabilityFormula.Flesch_Kincaid_Grade,
+                ReadabilityFormula.Flesch_Kincaid_Grade_Simplified,
+            ]
+
+        if Language.German == self.family():
+            return [
+                ReadabilityFormula.Flesch_Reading_Ease,
+                ReadabilityFormula.Wiener_Sachtextformel,
+                ReadabilityFormula.Wiener_Sachtextformel_1,
+                ReadabilityFormula.Wiener_Sachtextformel_2,
+                ReadabilityFormula.Wiener_Sachtextformel_3,
+                ReadabilityFormula.Wiener_Sachtextformel_4,
+            ]
+
+        if Language.Turkish == self.family():
+            return [
+                ReadabilityFormula.Atesman,
+                ReadabilityFormula.Bezirci_Yilmaz,
+            ]
+
     # # # # # # #
     # Operators #
     # # # # # # #

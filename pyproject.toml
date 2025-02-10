@@ -1,10 +1,6 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = [
-    "pyphen>=0.17.0",
-    "setuptools>=75.8.0",
-    "unidecode>=1.3.8",
-]
+requires = ["emoji>=2.14.1", "pyphen>=0.17.0", "setuptools>=75.8.0", "unidecode>=1.3.8"]
 
 [project]
 classifiers = [
@@ -36,7 +32,7 @@ keywords = [
     "turkish",
 ]
 license = { text = "MIT" }
-version = "0.2.1"
+version = "0.2.7"
 
 [[project.authors]]
 email = "contact@tugrulgungor.me"
@@ -64,7 +60,7 @@ Source = "https://github.com/smoothtext/smoothtext"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-packages = ["smoothtext"]
+packages = ["smoothtext", "smoothtext.internal"]
 
 [tool.setuptools.package-data]
 smoothtext = ["py.typed"]

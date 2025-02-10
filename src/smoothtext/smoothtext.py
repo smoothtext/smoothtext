@@ -1074,11 +1074,29 @@ class SmoothText:
         ):
             return self.__flesch_reading_ease(text=text)
 
+        if ReadabilityFormula.Bezirci_Yilmaz == formula:
+            return self.__bezirci_yilmaz(text=text)
+
         if ReadabilityFormula.Flesch_Kincaid_Grade == formula:
             return self.__flesch_kincaid_grade(text=text)
 
         if ReadabilityFormula.Flesch_Kincaid_Grade_Simplified == formula:
             return self.__flesch_kincaid_grade_simplified(text=text)
+
+        if ReadabilityFormula.Wiener_Sachtextformel == formula:
+            return self.__wiener_sachtextformel(text=text, version=3)
+
+        if ReadabilityFormula.Wiener_Sachtextformel_1 == formula:
+            return self.__wiener_sachtextformel(text=text, version=1)
+
+        if ReadabilityFormula.Wiener_Sachtextformel_2 == formula:
+            return self.__wiener_sachtextformel(text=text, version=2)
+
+        if ReadabilityFormula.Wiener_Sachtextformel_3 == formula:
+            return self.__wiener_sachtextformel(text=text, version=3)
+
+        if ReadabilityFormula.Wiener_Sachtextformel_4 == formula:
+            return self.__wiener_sachtextformel(text=text, version=4)
 
         return 0.0
 

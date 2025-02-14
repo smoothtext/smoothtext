@@ -149,7 +149,7 @@ class Language(Enum):
     # # # # # # # # # # # # #
     # Readability Formulas  #
     # # # # # # # # # # # # #
-    def readability_formulas(self) -> list["ReadabilityFormula"]:
+    def readability_formulas(self) -> list["ReadabilityFormula"]: # type: ignore
         """
         Get a list of supported readability formulas for the current language.
 
@@ -241,6 +241,16 @@ class Language(Enum):
     # # # # # # # # # #
     # Static Methods  #
     # # # # # # # # # #
+    @staticmethod
+    def families() -> list[Language]:
+        """
+        Get a list of all base language families.
+
+        Returns:
+            list[Language]: List containing all base Language enum values
+        """
+        return [Language.English, Language.German, Language.Turkish]
+
     @staticmethod
     def values() -> list[Language]:
         """

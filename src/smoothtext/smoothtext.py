@@ -1005,10 +1005,10 @@ class SmoothText:
         )
 
         score: float = 0.0
-        score += (float(syllable_frequencies[3]) / float(num_sentences)) * 0.84
-        score += (float(syllable_frequencies[4]) / float(num_sentences)) * 1.5
-        score += (float(syllable_frequencies[5]) / float(num_sentences)) * 3.5
-        score += (float(syllable_frequencies[6]) / float(num_sentences)) * 26.25
+        score += (float(syllable_frequencies.get(3, 0)) / float(num_sentences)) * 0.84
+        score += (float(syllable_frequencies.get(4, 0)) / float(num_sentences)) * 1.5
+        score += (float(syllable_frequencies.get(5, 0)) / float(num_sentences)) * 3.5
+        score += (float(syllable_frequencies.get(6, 0)) / float(num_sentences)) * 26.25
 
         return math.sqrt(avg_sentence_length * score)
 

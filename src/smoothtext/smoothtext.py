@@ -742,10 +742,6 @@ class SmoothText:
         if 0 == num_sentences:
             return 0.0, 0.0, 0.0, 0.0
 
-        print(
-            f"$$$$$$$$$$$$$$$$$ {total_words} {num_sentences} {num_long_words} {num_mono_syllable_words} {num_multi_syllable_words}"
-        )
-
         # Return the result.
         return (
             float(total_words) / float(num_sentences),

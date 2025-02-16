@@ -399,15 +399,17 @@ class SmoothText:
 
     @staticmethod
     def __filter_words(tokens: list[str]) -> list[str]:
-        return [word for word in tokens if word.isalnum()]
+        return [word for word in tokens if any(c.isalnum() for c in word)]
 
     @staticmethod
     def __count_words(tokens: list[str]) -> int:
         num_words: int = 0
 
         for token in tokens:
-            if token.isalnum():
-                num_words += 1
+            for c in token:
+                if c.isalnum():
+                    num_words += 1
+                    break
 
         return num_words
 
@@ -702,7 +704,7 @@ class SmoothText:
         # This method returns:
         #   - average sentence length
         #   - percentage of words with at least six characters
-        #   - words with single syllables
+        #   - percentage of words with single syllables
         #   - percentage of words with at least three syllables
 
         total_words: int = 0
@@ -740,12 +742,16 @@ class SmoothText:
         if 0 == num_sentences:
             return 0.0, 0.0, 0.0, 0.0
 
+        print(
+            f"$$$$$$$$$$$$$$$$$ {total_words} {num_sentences} {num_long_words} {num_mono_syllable_words} {num_multi_syllable_words}"
+        )
+
         # Return the result.
         return (
             float(total_words) / float(num_sentences),
-            float(num_long_words) / float(total_words),
-            float(num_mono_syllable_words) / float(total_words),
-            float(num_multi_syllable_words) / float(total_words),
+            float(num_long_words) / float(total_words) * 100.0,
+            float(num_mono_syllable_words) / float(total_words) * 100.0,
+            float(num_multi_syllable_words) / float(total_words) * 100.0,
         )
 
     # Flesch Reading Ease & Ateşman.
@@ -860,32 +866,19 @@ class SmoothText:
 
     # Wiener Sachtextformel
     def __wiener_sachtextformel(self, text: str, version: int) -> float:
-        avg_sentence_length, pct_long_words, pct_mono_syllable, pct_multi_syllable = (
-            self.__compute_3(text)
-        )
+        SL, IW, ES, MS = self.__compute_3(text)
 
         if 1 == version:
-            return (
-                0.1935 * pct_multi_syllable
-                + 0.1672 * avg_sentence_length
-                + 0.1297 * pct_long_words
-                - 0.0327 * pct_mono_syllable
-                - 0.875
-            )
+            return 0.1935 * MS + 0.1672 * SL + 0.1297 * IW - 0.0327 * ES - 0.875
 
         if 2 == version:
-            return (
-                0.2007 * pct_multi_syllable
-                + 0.1682 * avg_sentence_length
-                + 0.1373 * pct_long_words
-                - 2.779
-            )
+            return 0.2007 * MS + 0.1682 * SL + 0.1373 * IW - 2.779
 
         if 3 == version:
-            return 0.2963 * pct_multi_syllable + 0.1905 * avg_sentence_length - 1.1144
+            return 0.2963 * MS + 0.1905 * SL - 1.1144
 
         if 4 == version:
-            return 0.2744 * pct_multi_syllable + 0.2656 * avg_sentence_length - 1.693
+            return 0.2744 * MS + 0.2656 * SL - 1.693
 
         return 0.0
 

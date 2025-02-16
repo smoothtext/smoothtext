@@ -367,6 +367,6 @@ class TestReadability:
             assert len(scores) == 4
 
             for score in scores:
-                assert -2 <= score <= 2
+                assert 13 <= score <= 18
         else:
             pytest.skip("Wiener Sachtextformel is only for German texts")

@@ -7,6 +7,7 @@
 #  https://opensource.org/license/mit/
 
 from abc import abstractmethod
+from collections import Counter
 
 
 class TokenizerBase:
@@ -18,6 +19,10 @@ class TokenizerBase:
     def tokenize(self, text: str, split_sentences: bool) -> list[str]:
         pass
 
+    @abstractmethod
+    def word_frequencies(self, text: str, lemmatize: bool) -> dict[str, int]:
+        pass
+
 
 class NLTKTokenizer(TokenizerBase):
     def __init__(self, language: str) -> None:
@@ -25,6 +30,7 @@ class NLTKTokenizer(TokenizerBase):
 
         self.__punkt_tokenizer = nltk.PunktTokenizer(language)
         self.__word_tokenizer = nltk.NLTKWordTokenizer()
+        self.__lemmatizer = nltk.stem.WordNetLemmatizer()
 
     def sentencize(self, text: str) -> list[str]:
         return self.__punkt_tokenizer.tokenize(text)
@@ -39,6 +45,18 @@ class NLTKTokenizer(TokenizerBase):
             ]
         )
 
+    def word_frequencies(self, text: str, lemmatize: bool) -> dict[str, int]:
+        tokens: list[str] = self.tokenize(text, split_sentences=False)
+        tokens = [
+            token if any(char.isalpha() for char in token) else None for token in tokens
+        ]
+        tokens = [token.lower() for token in tokens if token is not None]
+
+        if lemmatize:
+            tokens = [self.__lemmatizer.lemmatize(token) for token in tokens]
+
+        return Counter(tokens)
+
 
 class StanzaTokenizer(TokenizerBase):
     def __init__(self, language: str) -> None:
@@ -46,7 +64,7 @@ class StanzaTokenizer(TokenizerBase):
 
         self.__nlp = stanza.Pipeline(
             lang=language,
-            processors="tokenize",
+            processors="tokenize, mwt, pos, lemma",
             package=None,
             download_method=stanza.DownloadMethod.NONE,
         )
@@ -68,3 +86,24 @@ class StanzaTokenizer(TokenizerBase):
                 for sentence in self.__nlp(text).sentences
             ]
         )
+
+    def word_frequencies(self, text: str, lemmatize: bool) -> dict[str, int]:
+        doc = self.__nlp(text)
+
+        if lemmatize:
+            tokens = [
+                word.lemma for sentence in doc.sentences for word in sentence.words
+            ]
+        else:
+            tokens = [
+                word.text.lower()
+                for sentence in doc.sentences
+                for word in sentence.words
+            ]
+
+        tokens = [
+            token if any(char.isalpha() for char in token) else None for token in tokens
+        ]
+        tokens = [token for token in tokens if token is not None]
+
+        return Counter(tokens)

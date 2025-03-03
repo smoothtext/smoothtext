@@ -71,6 +71,10 @@ SmoothText can extract sentences, words, or syllables from texts.
 
 SmoothText can calculate how long would a text take to read.
 
+### Counting Frequency of Words
+
+SmoothText can count the frequency of (lemmatized) words.
+
 ## Installation
 
 You can install SmoothText via `pip`.

@@ -83,7 +83,7 @@ def _prepare(
         else:
             import nltk
 
-            for package in ("cmudict", "punkt", "punkt_tab"):
+            for package in ("cmudict", "punkt", "punkt_tab", "wordnet"):
                 if not nltk.download(package, **backend_kwargs):
                     logging.error("Failed to download NLTK data. Exiting...")
                     return
@@ -429,6 +429,34 @@ class SmoothText:
         """
         tokens = self.tokenize(text, False)
         return SmoothText.__count_words(tokens)
+
+    def word_frequencies(self, text: str, lemmatize: bool = True) -> dict[str, int]:
+        """
+        Count the frequency of words in the text.
+
+        Args:
+            text: Input text to analyze
+            lemmatize: If True, lemmatize words before counting
+
+        Returns:
+            dict[str, int]: Dictionary of word frequencies
+
+        Examples:
+            >>> freqs = st.word_frequencies("Hello world! Hello again.")
+            >>> # Returns: {"hello": 2, "world": 1, "again": 1}
+        """
+        if (
+            Backend.NLTK == self.__backend
+            and Language.English != self.language.family()
+            and lemmatize
+        ):
+            logging.warning(
+                f"Lemmatization is not supported for {self.language} when using {self.backend}. Disabling..."
+            )
+
+            lemmatize = False
+
+        return self.__tokenizer.word_frequencies(text, lemmatize)
 
     # Syllable level.
     def syllabify(

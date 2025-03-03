@@ -91,7 +91,7 @@ def _prepare(
     elif Backend.Stanza == backend:
         import stanza
 
-        stanza.download(lang=language.alpha2(), processors="tokenize", **backend_kwargs)
+        stanza.download(lang=language.alpha2(), processors="tokenize, mwt, pos, lemma", **backend_kwargs)
 
     _Prepared[backend][language] = True
 

@@ -47,6 +47,7 @@ class ReadabilityFormula(Enum):
     """
 
     # Formulas for English.
+    Automated_Readability_Index = "Automated Readability Index"
     Flesch_Reading_Ease = "Flesch Reading Ease"
     Flesch_Kincaid_Grade = "Flesch-Kincaid Grade"
     Flesch_Kincaid_Grade_Simplified = "Flesch-Kincaid Grade Simplified"

@@ -37,13 +37,14 @@ keywords = [
     "german",
     "turkish",
     "atesman",
+    "automated-readability-index",
     "bezirci-yilmaz",
     "flesch",
     "flesch-kincaid",
     "wiener-sachtextformel",
 ]
 license = { text = "MIT" }
-version = "0.3.1"
+version = "0.3.2"
 
 [project.optional-dependencies]
 

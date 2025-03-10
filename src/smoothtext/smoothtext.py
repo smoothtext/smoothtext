@@ -91,7 +91,11 @@ def _prepare(
     elif Backend.Stanza == backend:
         import stanza
 
-        stanza.download(lang=language.alpha2(), processors="tokenize, mwt, pos, lemma", **backend_kwargs)
+        stanza.download(
+            lang=language.alpha2(),
+            processors="tokenize, mwt, pos, lemma",
+            **backend_kwargs,
+        )
 
     _Prepared[backend][language] = True
 
@@ -778,6 +782,60 @@ class SmoothText:
             float(num_multi_syllable_words) / float(total_words) * 100.0,
         )
 
+    def __compute_4(self, text: str) -> tuple[int, int, int]:
+        # This method returns:
+        #   - number of characters
+        #   - number of words
+        #   - number of sentences
+
+        num_characters: int = 0
+        num_words: int = 0
+        num_sentences: int = 0
+
+        # Tokenize the text into words and sentences.
+        sentences: list[list[str]] = self.tokenize(text=text, split_sentences=True)
+
+        # Perform calculations.
+        for sentence in sentences:
+            words: list[str] = SmoothText.__filter_words(sentence)
+
+            if 0 == len(words):
+                continue
+
+            num_sentences += 1
+            num_words += len(words)
+
+            for word in words:
+                for c in word:
+                    if c.isalnum():
+                        num_characters += 1
+
+        # Return the result.
+        return num_characters, num_words, num_sentences
+
+    # Automated Readability Index.
+    def __automated_readability_index(self, text: str) -> float:
+        num_characters, num_words, num_sentences = self.__compute_4(text)
+        if 0 == num_sentences:
+            return 0.0
+
+        return (
+            (0.5 * (float(num_words) / float(num_sentences)))
+            + (4.71 * (float(num_characters) / float(num_words)))
+            - 21.43
+        )
+
+    def automated_readability_index(self, text: str, demojize: bool = False) -> float:
+        if not SmoothText.__test_formula_langauge(
+            ReadabilityFormula.Automated_Readability_Index, self.__language
+        ):
+            return 0.0
+
+        if demojize:
+            text = self.demojize(text)
+
+        return self.__automated_readability_index(text=text)
+
     # Flesch Reading Ease & Ateşman.
     def __flesch_reading_ease(self, text: str) -> float:
         avg_word_syllables, avg_sentence_length = self.__compute_1(text)
@@ -1090,6 +1148,9 @@ class SmoothText:
             or ReadabilityFormula.Flesch_Reading_Ease == formula
         ):
             return self.__flesch_reading_ease(text=text)
+
+        if ReadabilityFormula.Automated_Readability_Index == formula:
+            return self.__automated_readability_index(text=text)
 
         if ReadabilityFormula.Bezirci_Yilmaz == formula:
             return self.__bezirci_yilmaz(text=text)

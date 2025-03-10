@@ -149,7 +149,7 @@ class Language(Enum):
     # # # # # # # # # # # # #
     # Readability Formulas  #
     # # # # # # # # # # # # #
-    def readability_formulas(self) -> list["ReadabilityFormula"]: # type: ignore
+    def readability_formulas(self) -> list["ReadabilityFormula"]:  # type: ignore
         """
         Get a list of supported readability formulas for the current language.
 
@@ -171,6 +171,7 @@ class Language(Enum):
 
         if Language.English == self.family():
             return [
+                ReadabilityFormula.Automated_Readability_Index,
                 ReadabilityFormula.Flesch_Reading_Ease,
                 ReadabilityFormula.Flesch_Kincaid_Grade,
                 ReadabilityFormula.Flesch_Kincaid_Grade_Simplified,

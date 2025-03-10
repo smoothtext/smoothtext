@@ -42,6 +42,7 @@ SmoothText can calculate readability scores of text in the following languages, 
 
 | Formula/Language                                                                                                                                                                                                                             | English |         German          |                                                                                                                                Turkish                                                                                                                                |
 |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------:|:-----------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+| [Automated Readability Index](https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=Senter+R.+J.%2C+Smith+E.+A.+%281967%29+Automated+Readability+Index&btnG=)                                                                              |    ✔    |            ❌            |                                                                                                                                   ❌                                                                                                                                   |
 | [Flesch Reading Ease](https://scholar.google.com/scholar?as_sdt=0%2C5&q=A+New+Readability+Yardstick+R+Flesch&btnG=)                                                                                                                          |    ✔    |            ✔            |                                                          ✔ [Ateşman](https://scholar.google.com/scholar?as_sdt=0%2C5&q=T%C3%BCrk%C3%A7ede+Okunabilirli%C4%9Fin+%C3%96l%C3%A7%C3%BClmesi+Ate%C5%9Fman&btnG=)                                                           |
 | [Flesch-Kincaid Grade](https://scholar.google.com/scholar?as_sdt=0%2C5&q=Derivation+of+new+readability+formulas+%28automated+readability+index%2C+fog+count+and+flesch+reading+ease+formula%29+for+navy+enlisted+personnel&btnG=)            |    ✔    | ✔ Wiener Sachtextformel | ✔ [Bezirci-Yılmaz](https://scholar.google.com/scholar?as_sdt=0%2C5&q=Metinlerin+okunabilirli%C4%9Finin+%C3%B6l%C3%A7%C3%BClmesi+%C3%BCzerine+bir+yazilim+k%C3%BCt%C3%BCphanesi+ve+T%C3%BCrk%C3%A7e+i%C3%A7in+yeni+bir+okunabilirlik+%C3%B6l%C3%A7%C3%BCt%C3%BC&btnG=) |
 | [Flesch-Kincaid Grade Simplified](https://scholar.google.com/scholar?as_sdt=0%2C5&q=Derivation+of+new+readability+formulas+%28automated+readability+index%2C+fog+count+and+flesch+reading+ease+formula%29+for+navy+enlisted+personnel&btnG=) |    ✔    |            ❌            |                                                                                                                                   ❌                                                                                                                                   |
@@ -165,11 +166,13 @@ Refer to the documentation for a complete list of available methods.
 
 ### Backend Related Inconsistencies
 
-- NLTK and Stanza have different tokenization rules. This may cause differences in the number of tokens/sentences between the two backends.
+- NLTK and Stanza have different tokenization rules. This may cause differences in the number of tokens/sentences
+  between the two backends.
 
 ### Language Related Inconsistencies
 
-- The syllabification of words may differ within the same language variant. For example, the word "hello" has two syllables in American English but one in British English.
+- The syllabification of words may differ within the same language variant. For example, the word "hello" has two
+  syllables in American English but one in British English.
 
 ## Documentation
 

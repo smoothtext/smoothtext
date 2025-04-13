@@ -24,9 +24,7 @@ from . import Backend
 from . import Language
 from . import ReadabilityFormula
 from .internal.syllabifier import (
-    SyllabifierEng,
-    SyllabifierGer,
-    SyllabifierTur,
+    _create_syllabifier,
     _is_consonant,
     _is_vowel,
     _asciify,
@@ -37,67 +35,100 @@ import emoji
 from emoji.unicode_codes import load_from_json as load_emoji_codes
 import math
 import logging
+import threading
 
+_Lock: threading.Lock = threading.Lock()
 _Prepared: dict[Backend, dict[Language, bool]] = {}
 
 
 def _prepare(
     backend: Backend, language: Language, skip_downloads: bool, **backend_kwargs
 ) -> None:
-    language = language.family()
+    global _Lock
 
-    logging.debug(f"Preparing backend {backend} for language {language}...")
+    with _Lock:
+        language = language.family()
 
-    if backend not in _Prepared:
-        _Prepared[backend] = {}
+        logging.debug(f"Preparing backend {backend} for language {language}...")
 
-    backend_languages = _Prepared[backend]
-    if language in backend_languages:
-        downloaded = backend_languages[language]
-        if downloaded or not skip_downloads:
+        if backend not in _Prepared:
+            _Prepared[backend] = {}
+
+        backend_languages = _Prepared[backend]
+        if language in backend_languages:
+            downloaded = backend_languages[language]
+            if downloaded or not skip_downloads:
+                logging.debug(
+                    f"Backend {backend} already prepared for language {language}. Skipping..."
+                )
+                return
+
             logging.debug(
-                f"Backend {backend} already prepared for language {language}. Skipping..."
+                f"Backend {backend} already prepared for language {language} but download required..."
+            )
+
+        if skip_downloads:
+            _Prepared[backend][language] = False
+            logging.debug(
+                f"Skipping downloads for backend {backend} and marking language {language} as prepared."
             )
             return
 
-        logging.debug(
-            f"Backend {backend} already prepared for language {language} but download required..."
-        )
+        if Backend.NLTK == backend:
+            was_downloaded = False
+            for language in backend_languages:
+                if backend_languages[language]:
+                    was_downloaded = True
+                    break
 
-    if skip_downloads:
-        _Prepared[backend][language] = False
-        logging.debug(
-            f"Skipping downloads for backend {backend} and marking language {language} as prepared."
-        )
-        return
+            if was_downloaded:
+                logging.debug(f"NLTK data already downloaded. Skipping...")
+            else:
+                import nltk
 
-    if Backend.NLTK == backend:
-        was_downloaded = False
-        for language in backend_languages:
-            if backend_languages[language]:
-                was_downloaded = True
-                break
+                for package in ("cmudict", "punkt", "punkt_tab", "wordnet"):
+                    if not nltk.download(package, **backend_kwargs):
+                        logging.error("Failed to download NLTK data. Exiting...")
+                        return
 
-        if was_downloaded:
-            logging.debug(f"NLTK data already downloaded. Skipping...")
-        else:
-            import nltk
+        elif Backend.Stanza == backend:
+            import stanza
 
-            for package in ("cmudict", "punkt", "punkt_tab", "wordnet"):
-                if not nltk.download(package, **backend_kwargs):
-                    logging.error("Failed to download NLTK data. Exiting...")
-                    return
+            stanza.download(
+                lang=language.alpha2(),
+                processors=StanzaTokenizer.processors(language.alpha2()),
+                **backend_kwargs,
+            )
 
-    elif Backend.Stanza == backend:
-        import stanza
+        _Prepared[backend][language] = True
 
-        stanza.download(
-            lang=language.alpha2(),
-            processors="tokenize, mwt, pos, lemma",
-            **backend_kwargs,
-        )
 
-    _Prepared[backend][language] = True
+_dale_chall_wordlist: set[str] = set()
+
+
+def _load_dale_chall_wordlist() -> set[str]:
+    global _dale_chall_wordlist
+    global _Lock
+
+    with _Lock:
+        if _dale_chall_wordlist:
+            return _dale_chall_wordlist
+
+        logging.debug("Loading Dale-Chall word list...")
+
+        import importlib.resources as pkg_resources
+
+        try:
+            with pkg_resources.path(
+                "smoothtext.resource.en", "dale_chall_wordlist.txt"
+            ) as path:
+                with open(path, "r") as file:
+                    _dale_chall_wordlist.update(file.read().splitlines())
+        except FileNotFoundError:
+            logging.error("Dale-Chall word list file not found.")
+            raise
+
+        return _dale_chall_wordlist
 
 
 class SmoothText:
@@ -130,6 +161,7 @@ class SmoothText:
     __constants: dict[Language, tuple[float, float, float]] = {
         Language.English: (206.835, 1.015, 84.6),
         Language.German: (180.0, 1.0, 58.5),
+        Language.Russian: (0.0, 0.0, 0.0),
         Language.Turkish: (198.825, 2.61, 40.175),
     }
 
@@ -281,26 +313,11 @@ class SmoothText:
         self.__configure_language(language)
 
     def __configure_language(self, language: Language) -> None:
-        # English
-        if Language.English == language:
-            language = Language.English_US
+        # Syllabifier
+        self.__syllabifier = _create_syllabifier(self.__backend, language)
 
-        if Language.English == language.family():
-            self.__syllabifier = SyllabifierEng(self.__backend, language)
-
-        # German
-        if Language.German == language:
-            language = Language.German_DE
-
-        if Language.German == language.family():
-            self.__syllabifier = SyllabifierGer()
-
-        # Turkish
-        if Language.Turkish == language:
-            language = Language.Turkish_TR
-
-        if Language.Turkish == language.family():
-            self.__syllabifier = SyllabifierTur()
+        if language == language.family():
+            language = language.variants()[0]
 
         # Constants
         self.__language = language
@@ -636,6 +653,23 @@ class SmoothText:
 
         return text
 
+    def remove_emojis(self, text: str) -> str:
+        """
+        Remove emoji characters from the text.
+
+        Args:
+            text: Input text containing emojis
+
+        Returns:
+            str: Text with emojis removed
+
+        Examples:
+            >>> text = st.remove_emojis("I love 🐈")
+            >>> # Returns: "I love "
+        """
+
+        return emoji.replace_emoji(text, replace="")
+
     # # # # # # # #
     # Readability #
     # # # # # # # #
@@ -788,9 +822,39 @@ class SmoothText:
         #   - number of words
         #   - number of sentences
 
+        # Note: ARI is an old formula. This method follows the same logic as the original in terms of counting characters
+        # and words.
+
         num_characters: int = 0
         num_words: int = 0
         num_sentences: int = 0
+
+        # Tokenize the text into sentences.
+        sentences: list[str] = self.sentencize(text=text)
+
+        # Perform calculations.
+        for sentence in sentences:
+            words: list[str] = sentence.split(" ")
+
+            if not words:
+                continue
+
+            num_characters += sum(len(word) for word in words)
+            num_words += len(words)
+            num_sentences += 1
+
+        # Return the result.
+        return num_characters, num_words, num_sentences
+
+    def __compute_5(self, text: str) -> tuple[int, int, int]:
+        # This method returns:
+        #   - total number of sentences
+        #   - total number of words
+        #   - total number of words with three or more syllables
+
+        num_sentences: int = 0
+        num_words: int = 0
+        num_words_with_three_or_more_syllables: int = 0
 
         # Tokenize the text into words and sentences.
         sentences: list[list[str]] = self.tokenize(text=text, split_sentences=True)
@@ -806,16 +870,15 @@ class SmoothText:
             num_words += len(words)
 
             for word in words:
-                for c in word:
-                    if c.isalnum():
-                        num_characters += 1
+                if 2 < self.__syllabifier.count(word):
+                    num_words_with_three_or_more_syllables += 1
 
-        # Return the result.
-        return num_characters, num_words, num_sentences
+        return num_sentences, num_words, num_words_with_three_or_more_syllables
 
     # Automated Readability Index.
     def __automated_readability_index(self, text: str) -> float:
         num_characters, num_words, num_sentences = self.__compute_4(text)
+
         if 0 == num_sentences:
             return 0.0
 
@@ -946,6 +1009,28 @@ class SmoothText:
 
         return self.__flesch_kincaid_grade_simplified(text=text)
 
+    def __gunning_fog_index(self, text: str) -> float:
+        num_sentences, num_words, complex_words = self.__compute_5(text)
+
+        if 0 == num_sentences:
+            return 0.0
+
+        return (
+            (float(num_words) / float(num_sentences))
+            + (100 * (float(complex_words) / float(num_words)))
+        ) * 0.4
+
+    def gunning_fog_index(self, text: str, demojize: bool = False) -> float:
+        if not SmoothText.__test_formula_langauge(
+            ReadabilityFormula.Gunning_Fog_Index, self.__language
+        ):
+            return 0.0
+
+        if demojize:
+            text = self.demojize(text)
+
+        return self.__gunning_fog_index(text=text)
+
     # Wiener Sachtextformel
     def __wiener_sachtextformel(self, text: str, version: int) -> float:
         SL, IW, ES, MS = self.__compute_3(text)
@@ -1073,11 +1158,22 @@ class SmoothText:
         """
         return self.wiener_sachtextformel(text=text, demojize=demojize, version=4)
 
+    # Matskovskiy
+    def __matskovskiy(self, text: str) -> float:
+        num_sentences, num_words, complex_words = self.__compute_5(text)
+        return (
+            (0.62 * (float(num_words) / float(num_sentences)))
+            + (0.123 * (float(complex_words) / float(num_words)))
+            + 0.051
+        )
+
+    def matskovskiy(self, text: str, demojize: bool = False) -> float:
+        return self.__matskovskiy(text=text)
+
     # Bezirci-Yılmaz
     def __bezirci_yilmaz(self, text: str) -> float:
-        _, avg_sentence_length, num_sentences, syllable_frequencies = self.__compute_2(
-            text
-        )
+        self.compute__ = self.__compute_2(text)
+        _, avg_sentence_length, num_sentences, syllable_frequencies = self.compute__
 
         score: float = 0.0
         score += (float(syllable_frequencies.get(3, 0)) / float(num_sentences)) * 0.84
@@ -1160,6 +1256,9 @@ class SmoothText:
 
         if ReadabilityFormula.Flesch_Kincaid_Grade_Simplified == formula:
             return self.__flesch_kincaid_grade_simplified(text=text)
+
+        if ReadabilityFormula.Gunning_Fog_Index == formula:
+            return self.__gunning_fog_index(text=text)
 
         if ReadabilityFormula.Wiener_Sachtextformel == formula:
             return self.__wiener_sachtextformel(text=text, version=3)

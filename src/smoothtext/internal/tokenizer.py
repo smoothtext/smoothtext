@@ -59,12 +59,20 @@ class NLTKTokenizer(TokenizerBase):
 
 
 class StanzaTokenizer(TokenizerBase):
+    @staticmethod
+    def processors(language: str) -> str:
+        p: str = "tokenize, pos, lemma"
+        if "ru" != language:
+            p += ", mwt"
+
+        return p
+
     def __init__(self, language: str) -> None:
         import stanza
 
         self.__nlp = stanza.Pipeline(
             lang=language,
-            processors="tokenize, mwt, pos, lemma",
+            processors=StanzaTokenizer.processors(language),
             package=None,
             download_method=stanza.DownloadMethod.NONE,
         )

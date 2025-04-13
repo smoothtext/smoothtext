@@ -3,6 +3,8 @@
 .pytest_cache
 .venv
 .vscode
+main.py
+TODO
 
 dist
 docs

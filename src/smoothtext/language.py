@@ -40,6 +40,7 @@ class Language(Enum):
         # Base Languages
         English: Generic English language support
         German: Generic German language support
+        Russian: Generic Russian language support
         Turkish: Generic Turkish language support
 
         # English Variants
@@ -48,6 +49,9 @@ class Language(Enum):
 
         # German Variants
         German_DE: German (Germany) variant (default for 'de')
+
+        # Russian Variants
+        Russian_RU: Russian (Russia) variant (default for 'ru')
 
         # Turkish Variants
         Turkish_TR: Turkish (Türkiye) variant (default for 'tr')
@@ -64,6 +68,7 @@ class Language(Enum):
     # Base Languages
     English = "English"
     German = "German"
+    Russian = "Russian"
     Turkish = "Turkish"
 
     # English Variants
@@ -72,6 +77,9 @@ class Language(Enum):
 
     # German Variants
     German_DE = "German (Germany)"
+
+    # Russian Variants
+    Russian_RU = "Russian (Russia)"
 
     # Turkish Variants
     Turkish_TR = "Turkish (Türkiye)"
@@ -96,6 +104,9 @@ class Language(Enum):
         if self in [Language.German_DE]:
             return Language.German
 
+        if self in [Language.Russian_RU]:
+            return Language.Russian
+
         if self in [Language.Turkish_TR]:
             return Language.Turkish
 
@@ -119,6 +130,9 @@ class Language(Enum):
 
         if self.family() == Language.German:
             return [Language.German_DE]
+
+        if self.family() == Language.Russian:
+            return [Language.Russian_RU]
 
         if self.family() == Language.Turkish:
             return [Language.Turkish_TR]
@@ -161,9 +175,11 @@ class Language(Enum):
 
         Examples:
             >>> Language.English.readability_formulas()
-            [ReadabilityFormula.Flesch_Reading_Ease,
+            [ReadabilityFormula.Automated_Readability_Index,
+             ReadabilityFormula.Flesch_Reading_Ease,
              ReadabilityFormula.Flesch_Kincaid_Grade,
-             ReadabilityFormula.Flesch_Kincaid_Grade_Simplified]
+             ReadabilityFormula.Flesch_Kincaid_Grade_Simplified,
+             ReadabilityFormula.Gunning_Fog_Index]
             >>> Language.Turkish.readability_formulas()
             [ReadabilityFormula.Atesman, ReadabilityFormula.Bezirci_Yilmaz]
         """
@@ -175,6 +191,7 @@ class Language(Enum):
                 ReadabilityFormula.Flesch_Reading_Ease,
                 ReadabilityFormula.Flesch_Kincaid_Grade,
                 ReadabilityFormula.Flesch_Kincaid_Grade_Simplified,
+                ReadabilityFormula.Gunning_Fog_Index,
             ]
 
         if Language.German == self.family():
@@ -185,6 +202,11 @@ class Language(Enum):
                 ReadabilityFormula.Wiener_Sachtextformel_2,
                 ReadabilityFormula.Wiener_Sachtextformel_3,
                 ReadabilityFormula.Wiener_Sachtextformel_4,
+            ]
+
+        if Language.Russian == self.family():
+            return [
+                ReadabilityFormula.Matskovskiy,
             ]
 
         if Language.Turkish == self.family():
@@ -250,7 +272,7 @@ class Language(Enum):
         Returns:
             list[Language]: List containing all base Language enum values
         """
-        return [Language.English, Language.German, Language.Turkish]
+        return [Language.English, Language.German, Language.Russian, Language.Turkish]
 
     @staticmethod
     def values() -> list[Language]:
@@ -266,6 +288,8 @@ class Language(Enum):
             Language.English_US,
             Language.German,
             Language.German_DE,
+            Language.Russian,
+            Language.Russian_RU,
             Language.Turkish,
             Language.Turkish_TR,
         ]
@@ -315,7 +339,7 @@ class Language(Enum):
 
     @staticmethod
     def parse_multiple(
-        languages: Language | str | list[Language | str],
+            languages: Language | str | list[Language | str],
     ) -> list[Language]:
         """
         Parse multiple language identifiers into a list of Language enum values.
@@ -354,6 +378,9 @@ _Constants[Language.English_US] = (Language.English_US.value.lower(), "en-us", "
 
 _Constants[Language.German] = (Language.German.value.lower(), "de", "deu")
 _Constants[Language.German_DE] = (Language.German_DE.value.lower(), "de-de", "deu-de")
+
+_Constants[Language.Russian] = (Language.Russian.value.lower(), "ru", "rus")
+_Constants[Language.Russian_RU] = (Language.Russian_RU.value.lower(), "ru-ru", "rus-ru")
 
 _Constants[Language.Turkish] = (Language.Turkish.value.lower(), "tr", "tur")
 _Constants[Language.Turkish_TR] = (Language.Turkish_TR.value.lower(), "tr-tr", "tur-tr")

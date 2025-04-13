@@ -139,8 +139,6 @@ def test_language_values():
         Language.English_US,
         Language.German,
         Language.German_DE,
-        Language.Russian,
-        Language.Russian_RU,
         Language.Turkish,
         Language.Turkish_TR,
     }

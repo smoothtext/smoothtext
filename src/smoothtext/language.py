@@ -196,7 +196,7 @@ class Language(Enum):
 
         if Language.German == self.family():
             return [
-                ReadabilityFormula.Flesch_Reading_Ease,
+                ReadabilityFormula.Amstad,
                 ReadabilityFormula.Wiener_Sachtextformel,
                 ReadabilityFormula.Wiener_Sachtextformel_1,
                 ReadabilityFormula.Wiener_Sachtextformel_2,

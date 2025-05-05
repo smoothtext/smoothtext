@@ -1240,7 +1240,8 @@ class SmoothText:
 
         # Redirections.
         if (
-            ReadabilityFormula.Atesman == formula
+            ReadabilityFormula.Amstad == formula
+            or ReadabilityFormula.Atesman == formula
             or ReadabilityFormula.Flesch_Reading_Ease == formula
         ):
             return self.__flesch_reading_ease(text=text)

@@ -80,6 +80,7 @@ class ReadabilityFormula(Enum):
     Gunning_Fog_Index = "Gunning Fog Index"
 
     # Formulas for German.
+    Amstad = "Amstad"
     Wiener_Sachtextformel = "Wiener Sachtextformel"
     Wiener_Sachtextformel_1 = "Wiener Sachtextformel 1"
     Wiener_Sachtextformel_2 = "Wiener Sachtextformel 2"

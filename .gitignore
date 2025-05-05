@@ -1,12 +1,4 @@
-.env
+.github
 .idea
-.pytest_cache
 .venv
-.vscode
-main.py
-TODO
-
-dist
-docs
-*__pycache__*
-*.egg*
+.env

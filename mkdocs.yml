@@ -1,0 +1,35 @@
+docs_dir: docs
+nav:
+  - "Introduction": "introduction.md"
+  - "Installation": "installation.md"
+  - "Quick Start": "quick_start.md"
+  - "API":
+      - "Backend": "api/backend.md"
+      - "Language": "api/language.md"
+      - "Language Variant": "api/language_variant.md"
+      - "Locale": "api/locale.md"
+      - "Readability Formula": "api/readability_formula.md"
+      - "Resource Manager": "api/resource_manager.md"
+      - "SmoothText": "api/smoothtext.md"
+      - "Text Statistics": "api/text_statistics.md"
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            separate_signature: true
+            merge_init_into_class: true
+            inherited_members: true
+            filters:
+              - "!^_"
+            extra:
+              show_root_toc: true
+              merge_inherited_members: true
+              show_inherited_members: true
+repo_url: https://github.com/smoothtext/smoothtext
+site_name: SmoothText
+theme:
+  name: "material"

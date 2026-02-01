@@ -1,0 +1,47 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+authors = [{ name = "Tugrul Gungor", email = "contact@tugrulgungor.me" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Natural Language :: English",
+    "Natural Language :: German",
+    "Natural Language :: Russian",
+    "Natural Language :: Turkish",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = ["pyphen (>=0.17.0,<0.18)"]
+description = "A Python library for readability and textual metrics analysis, supporting multiple languages."
+keywords = ["readability", "english", "german", "russian", "turkish"]
+license = { text = "MIT" }
+maintainers = [{ name = "Tugrul Gungor", email = "contact@tugrulgungor.me" }]
+name = "SmoothText"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+version = "1.0.0"
+
+[dependency-groups]
+doc = [
+    "mkdocs (>=1.6.0,<2.0.0)",
+    "mkdocs-material (>=9.6.0,<10.0.0)",
+    "mkdocstrings (>=1.0.0,<2.0.0)",
+    "mkdocstrings-python (>=2.0.0,<3.0.0)",
+]
+dev = ["ruff (>=0.14.0,<0.15.0)"]
+test = ["pytest (>=8.0.0,<9.0.0)", "pytest-cov (>=4.0.0,<5.0.0)"]
+
+nltk = ["nltk (>=3.9.2,<4.0.0)"]
+spacy = ["spacy (>=3.8.3,<4.0.0)", "cmudict (>=1.0.32,<2.0.0)"]
+stanza = ["stanza (>=1.11.0,<2.0.0)", "cmudict (>=1.0.32,<2.0.0)"]
+
+[tool.poetry]
+packages = [{ include = "smoothtext", from = "src" }]

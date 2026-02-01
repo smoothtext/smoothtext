@@ -31,7 +31,7 @@ def _matskovskiy(
                 num_complex_words += 1
 
     return (
-        (0.62 * (float(num_words) / float(num_sentences)))
-        + (0.123 * (float(num_complex_words) / float(num_words)))
+        (0.62 * (num_words / num_sentences))
+        + (0.123 * (num_complex_words / num_words * 100.0))
         + 0.051
     )

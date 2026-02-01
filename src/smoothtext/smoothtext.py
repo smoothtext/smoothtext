@@ -524,8 +524,9 @@ class SmoothText:
                     statistics.syllable_frequencies.get(word_syllable_count, 0) + 1
                 )
 
-                statistics.word_frequencies[word] = (
-                    statistics.word_frequencies.get(word, 0) + 1
+                word_lower: str = word.lower()
+                statistics.word_frequencies[word_lower] = (
+                    statistics.word_frequencies.get(word_lower, 0) + 1
                 )
 
         statistics.syllable_frequencies = dict(

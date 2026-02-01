@@ -34,8 +34,11 @@ def _dale_chall(
             if word.lower() not in wordlist:
                 num_difficult_words += 1
 
-    return (
-        0.1579 * ((num_difficult_words / num_words) * 100.0)
-        + 0.0496 * (num_words / num_sentences)
-        + 3.63
-    )
+    pct_difficult_words: float = (num_difficult_words / num_words) * 100.0
+    avg_sentence_length: float = num_words / num_sentences
+
+    score: float = 0.1579 * pct_difficult_words + 0.0496 * avg_sentence_length
+    if pct_difficult_words > 5.0:
+        score += 3.6365
+
+    return score

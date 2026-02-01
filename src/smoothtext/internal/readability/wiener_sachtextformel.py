@@ -36,7 +36,7 @@ def _wiener_sachtextformel_base(
 
         for word in sentence:
             word = word.lower()
-            if 6 <= len(word):
+            if len(word) > 6:
                 num_long_words += 1
 
             word_syllable_count: int = syllabifier.count(word)

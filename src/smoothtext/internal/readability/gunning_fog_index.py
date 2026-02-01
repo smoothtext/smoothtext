@@ -33,6 +33,4 @@ def _gunning_fog_index(
             if syllabifier.count(word) >= 3:
                 num_complex_words += 1
 
-                print("complex word", word)
-
     return 0.4 * ((num_words / num_sentences) + 100 * (num_complex_words / num_words))

@@ -60,6 +60,19 @@ class SmoothText:
         self._locale = locale_
         self._prepare()
 
+    def __call__(self, text: str, formula: ReadabilityFormula) -> float:
+        """
+        Compute the readability of the text using the provided formula.
+
+        Args:
+            text (str): The text to compute the readability of.
+            formula (ReadabilityFormula): The formula to use.
+
+        Returns:
+            float: The readability of the text.
+        """
+        return self.compute_readability(text, formula)
+
     @property
     def backend(self) -> Backend:
         """

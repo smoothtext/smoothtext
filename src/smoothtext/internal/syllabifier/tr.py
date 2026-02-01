@@ -51,10 +51,12 @@ class SyllabifierTr(SyllabifierBase):
         return len(self.syllabify(word))
 
     def _a(self, word: str) -> str:
+        word = word.replace("ı", "i").replace("İ", "I")
+
         return "".join(
             c
             for c in unicodedata.normalize("NFD", word)
-            if unicodedata.category(c) != "Mm"
+            if unicodedata.category(c) != "Mn"
         )
 
     def _v(self, c: str) -> bool:

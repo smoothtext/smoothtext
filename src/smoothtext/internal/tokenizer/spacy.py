@@ -51,13 +51,15 @@ class TokenizerSpaCy(TokenizerBase):
                     [
                         self._t(token, include_tags)
                         for token in sentence
-                        if not token.is_punct
+                        if not remove_punct or not token.is_punct
                     ]
                     for sentence in doc.sents
                 ]
             else:
                 return [
-                    self._t(token, include_tags) for token in doc if not token.is_punct
+                    self._t(token, include_tags)
+                    for token in doc
+                    if not remove_punct or not token.is_punct
                 ]
 
         if sentencize:

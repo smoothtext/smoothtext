@@ -6,12 +6,27 @@
 #  Distributed under the MIT License.
 #  https://opensource.org/license/mit/
 
+import logging
+from threading import Lock
+
+try:
+    import nltk
+except ImportError:
+    pass
+
+try:
+    import spacy
+except ImportError:
+    pass
+
+try:
+    import stanza
+except ImportError:
+    pass
+
 from ...backend import Backend
 from ...language import Language
 from ...locale import Locale
-
-import logging
-from threading import Lock
 
 
 _BackendInstallLock = Lock()
@@ -30,8 +45,6 @@ def _backend_install_nltk(locale: Locale, **kwargs: object) -> bool:
 
     if _BackendInstallStat[Backend.NLTK]:
         return True
-
-    import nltk
 
     args: dict[str, bool | str] = {
         "download_dir": "",
@@ -136,8 +149,6 @@ def _backend_install_spacy(locale: Locale, **kwargs: object) -> bool:
     if not args["model"]:
         args["model"] = models[locale.language]
 
-    import spacy
-
     installed = spacy.util.get_installed_models()
     if args["model"] not in installed:
         try:
@@ -188,8 +199,6 @@ def _backend_install_stanza(locale: Locale, **kwargs: object) -> bool:
             return True
 
     try:
-        import stanza
-
         stanza.download(
             lang=locale.language.alpha2,
             **args,
